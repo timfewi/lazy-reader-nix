@@ -1,0 +1,13 @@
+# Nix build outputs
+result
+result-*
+
+# direnv
+.direnv/
+
+# Editor / OS junk
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,5 @@
+{ ... }: {
+  imports = [
+    ./lazy-reader.nix
+  ];
+}
