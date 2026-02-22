@@ -163,6 +163,24 @@ services.lazy-reader = {
 };
 ```
 
+Example with OpenRouter command moved into this repo (cleaner `configuration.nix`):
+
+```nix
+services.lazy-reader = {
+  enableExplainInGnome = true;
+  gnomeExplainShortcut = "<Super>a";
+  explainMaxChars = 1000; # recommended 700-1200 for lower latency
+  explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the OpenRouter script:
+
+- `LAZY_READER_EXPLAIN_MODEL` (default: `openai/gpt-4o-mini`)
+- `LAZY_READER_EXPLAIN_MAX_TOKENS` (default: `120`)
+- `LAZY_READER_EXPLAIN_TEMPERATURE` (default: `0.1`)
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
+
 Default explain hotkey in GNOME is `services.lazy-reader.gnomeExplainShortcut = "<Super>a"` (GNOME app grid is cleared automatically via `clearDefaultSuperAInGnome = true`).
 
 ## Verify GNOME keybinding state
