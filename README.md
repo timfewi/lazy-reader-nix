@@ -1,13 +1,13 @@
 # lazy-reader-nix
 
-Reads currently selected text out loud with GROQ Text-to-Speech when you press `Super+S` (GNOME Wayland).
+Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland).
 
 ## What this repo provides
 
-- `lazy-reader.nix`: NixOS module (`services.lazy-reader`) 
+- `lazy-reader.nix`: NixOS module (`services.lazy-reader`)
 - `scripts/lazy-reader.sh`: runtime script that:
   - gets selected text from Wayland selection (`wl-paste --primary`) with clipboard fallback,
-  - calls GROQ TTS API (`/openai/v1/audio/speech`),
+  - synthesizes speech locally with `piper`,
   - plays returned audio via `mpv` or `ffplay`.
 - GNOME binding automation via user systemd service.
 
@@ -27,13 +27,23 @@ Import the module in your NixOS config:
     gnomeShortcut = "<Super>s";
     # clearDefaultSuperSInGnome = true;
     speed = 1.4;
-    playbackSpeed = 1.4;
 
     # Optional
     # autoBindInGnome = true;
-    # model = "canopylabs/orpheus-v1-english";
-    # voice = "troy";
+    # model = "/var/lib/piper/en_US-lessac-medium.onnx";
+    # modelConfig = "/var/lib/piper/en_US-lessac-medium.onnx.json";
+    # modelUrl = "https://.../en_US-lessac-medium.onnx";
+    # modelSha256 = "sha256-...";
+    # modelConfigUrl = "https://.../en_US-lessac-medium.onnx.json";
+    # modelConfigSha256 = "sha256-...";
+    # speaker = 0;
     # audioPlayer = "mpv";
+    # streamPlayback = true;
+    # enableExplainInGnome = true;           # set to true to register Super+A binding
+    # gnomeExplainShortcut = "<Super>a";     # default shortcut for explain mode
+    # clearDefaultSuperAInGnome = true;      # clears GNOME app-grid shortcut (Super+A)
+    # explainCommand = "ollama run qwen2.5-coder:7b 'Explain this code briefly:'";  # required for explain mode
+    # explainMaxChars = 2400;
   };
 }
 ```
@@ -46,40 +56,51 @@ Apply changes:
 sudo nixos-rebuild switch
 ```
 
-## Set API key securely
+## Set a local Piper model
 
-The module expects `LAZY_READER_GROQ_API_KEY` in your user session environment by default.
+Point `services.lazy-reader.model` to a local Piper `.onnx` file.
 
-Example (temporary for current shell/session):
-
-```bash
-export LAZY_READER_GROQ_API_KEY='your-real-key'
-```
-
-For persistent user-level env on NixOS, set it via your preferred secret strategy (e.g. user environment manager, systemd user environment file, or an encrypted secret flow). Do **not** hardcode API keys in Nix files.
-
-This module binds the shortcut command through `zsh -lc`, so exports from your `~/.zshrc` are loaded when pressing `Super+S`.
-
-You can change env var name:
+Example:
 
 ```nix
-services.lazy-reader.apiKeyEnvVar = "MY_GROQ_KEY";
+services.lazy-reader.model = "/var/lib/piper/en_US-lessac-medium.onnx";
+services.lazy-reader.modelConfig = "/var/lib/piper/en_US-lessac-medium.onnx.json";
+services.lazy-reader.speaker = 0;
 ```
+
+If `modelConfig` is omitted, Piper tries to auto-detect it.
+
+## Fetch model directly from URL (recommended for easy switching)
+
+You can configure the model as URL + hash directly in the module.
+Nix will fetch it into the store, and lazy-reader uses the local store path at runtime.
+
+```nix
+services.lazy-reader = {
+  modelUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx";
+  modelSha256 = "17q1mzm6xd5i2rxx2xwqkxvfx796kmp1lvk4mwkph602k7k0kzjy";
+
+  modelConfigUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json";
+  modelConfigSha256 = "184hnvd8389xpdm0x2w6phss23v5pb34i0lhd4nmy1gdgd0rrqgg";
+};
+```
+
+When both path- and URL-based options are set, URL-based options take precedence.
 
 ## Behavior
 
 1. Highlight text with mouse in any window.
 2. Press `Super+S` to start reading.
 3. Press `Super+S` again while reading to stop immediately.
+4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
 
 If no text is selected, it shows a notification.
 
 ## Quick test (without hotkey)
 
-Run this first to verify API + audio work:
+Run this first to verify local synthesis + audio work:
 
 ```bash
-export LAZY_READER_GROQ_API_KEY='your-real-key'
 wl-copy --primary "Hello, this is a lazy reader test."
 lazy-reader
 ```
@@ -90,6 +111,7 @@ Manual controls:
 lazy-reader start
 lazy-reader stop
 lazy-reader status
+lazy-reader explain
 ```
 
 If this works, your script is fine and only keybinding setup remains.
@@ -100,27 +122,66 @@ Set speed in Nix and rebuild:
 
 ```nix
 services.lazy-reader.speed = 1.3;
-services.lazy-reader.playbackSpeed = 1.4;
 ```
 
 `1.0` is normal speed, `1.3` / `1.4` are faster.
+Runtime env vars also accept aliases: `slow` (`0.8`), `normal` (`1.0`), `fast` (`1.4`).
 
 Default is now `1.4` if you do not set anything.
 
-If the model still sounds slow, increase `playbackSpeed` (this is applied by local player and always takes effect).
-
-Why both exist:
-- `speed`: sent to GROQ TTS model (voice generation speed).
-- `playbackSpeed`: local player speed multiplier (always audible).
+`speed` now controls both Piper synthesis speed and local playback speed.
 
 You can also override at runtime (because shortcut runs through `zsh -lc`):
 
 ```bash
 export LAZY_READER_SPEED=1.3
-export LAZY_READER_PLAYBACK_SPEED=1.4
+export LAZY_READER_STREAM_PLAYBACK=1
 ```
 
-Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy-reader.speed`, and `LAZY_READER_PLAYBACK_SPEED` / `services.lazy-reader.playbackSpeed`).
+Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy-reader.speed`).
+
+`LAZY_READER_PLAYBACK_SPEED` is still accepted as a legacy fallback for compatibility, but `LAZY_READER_SPEED` is preferred.
+
+### Explain mode (selected snippet → explanation → speech)
+
+Explain mode is disabled until you configure an explainer command.
+
+The command must:
+
+- read selected text from stdin,
+- print the explanation to stdout.
+
+Example with a local Ollama model:
+
+```nix
+services.lazy-reader = {
+  enableExplainInGnome = true;
+  gnomeExplainShortcut = "<Super>a";  # default
+  explainCommand = ''
+    ollama run qwen2.5-coder:7b "Explain this code in simple terms:\n$(cat)"
+  '';
+};
+```
+
+Example with OpenRouter command moved into this repo (cleaner `configuration.nix`):
+
+```nix
+services.lazy-reader = {
+  enableExplainInGnome = true;
+  gnomeExplainShortcut = "<Super>a";
+  explainMaxChars = 1000; # recommended 700-1200 for lower latency
+  explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the OpenRouter script:
+
+- `LAZY_READER_EXPLAIN_MODEL` (default: `openai/gpt-4o-mini`)
+- `LAZY_READER_EXPLAIN_MAX_TOKENS` (default: `120`)
+- `LAZY_READER_EXPLAIN_TEMPERATURE` (default: `0.1`)
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
+
+Default explain hotkey in GNOME is `services.lazy-reader.gnomeExplainShortcut = "<Super>a"` (GNOME app grid is cleared automatically via `clearDefaultSuperAInGnome = true`).
 
 ## Verify GNOME keybinding state
 
@@ -142,6 +203,10 @@ Inspect the bound command:
 ```bash
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader/ command
+
+# Explain binding (when enableExplainInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ command
 ```
 
 Inspect user service logs:
@@ -157,25 +222,24 @@ Re-apply binding immediately (without logout):
 systemctl --user restart lazy-reader-bind-gnome.service
 ```
 
-If you changed your API key export in `~/.zshrc`, run that restart command so GNOME re-reads the command binding.
+If you changed shell env vars or explain command behavior, run that restart command so GNOME re-reads the command binding.
 
 ## Troubleshooting
 
-- Error `requires terms acceptance` (HTTP 400):
-  - Open https://console.groq.com/playground?model=canopylabs/orpheus-v1-english
-  - Accept model terms with your org/admin account
-  - Re-run `lazy-reader`
-  - If your account uses a different approved TTS model, set it in Nix:
-    ```nix
-    services.lazy-reader.model = "your-approved-tts-model";
-    ```
+- `Local Piper synthesis failed`:
+  - Confirm model path exists and ends with `.onnx`.
+  - If you set `services.lazy-reader.modelConfig`, confirm it exists.
+  - For multi-speaker models, set a valid `services.lazy-reader.speaker` value.
 
 - `Super+S` still opens GNOME Quick Settings:
+
   ```bash
   gsettings set org.gnome.shell.keybindings toggle-quick-settings "[]"
   systemctl --user restart lazy-reader-bind-gnome.service
   ```
+
   You can keep this automated with:
+
   ```nix
   services.lazy-reader.clearDefaultSuperSInGnome = true;
   ```
@@ -184,15 +248,25 @@ If you changed your API key export in `~/.zshrc`, run that restart command so GN
   ```bash
   systemctl --user restart lazy-reader-bind-gnome.service
   ```
-- `Missing API key` only on `Super+S` but works in terminal:
-  - Confirm `~/.zshrc` includes: `export LAZY_READER_GROQ_API_KEY=...`
-  - Rebuild + restart `lazy-reader-bind-gnome.service`.
 - Missing notifications: ensure notification daemon is running in desktop session.
 - No audio: switch player:
   ```nix
   services.lazy-reader.audioPlayer = "ffplay";
   ```
 - Selection empty in some apps: select text then copy once, script will use clipboard fallback.
+
+## Running the tests
+
+```bash
+bash tests/run.sh
+```
+
+This runs two suites:
+
+1. **Syntax checks** (`tests/syntax.sh`) — `bash -n` on every shell script and `nix-instantiate --parse` on every Nix file.
+2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, and the main dispatch logic.
+
+`bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
 
 ## License
 

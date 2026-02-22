@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "./block-destructive-commands.sh",
+        "matcher": "run_in_terminal|execute_command|bash|terminal|shell"
+      },
+      {
+        "type": "command",
+        "command": "./block-destructive-commands.sh",
+        "matcher": "apply_patch|mcp_github_(create_or_update_file|delete_file|push_files|merge_pull_request)"
+      }
+    ]
+  }
+}
