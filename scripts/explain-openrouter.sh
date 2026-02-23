@@ -3,9 +3,9 @@
 # OpenRouter explain command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints concise explanation to stdout.
 input="$(cat)"
-model="${LAZY_READER_EXPLAIN_MODEL:-openai/gpt-4o-mini}"
-max_tokens="${LAZY_READER_EXPLAIN_MAX_TOKENS:-120}"
-temperature="${LAZY_READER_EXPLAIN_TEMPERATURE:-0.1}"
+model="x-ai/grok-4.1-fast"
+max_tokens="1200"
+temperature="0.1"
 
 curl -sf https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $LAZY_READER_OPENROUTER_API_KEY" \
@@ -22,7 +22,7 @@ curl -sf https://openrouter.ai/api/v1/chat/completions \
       messages:[
         {
           role:"user",
-          content:("Explain this code in very simple words. Keep it to 2-4 short bullet points with only practical meaning. Code:\n\n" + $t)
+          content:("Explain this code in short, natural spoken language for listening. Use 4 to 6 simple sentences. No bullet points, no markdown, no code formatting, and no symbols like star dash hash slash backticks or braces. Use plain words as if a person is speaking. If context is missing, make one brief assumption and continue.\n\nCode:\n\n" + $t)
         }
       ]
     }')" \
