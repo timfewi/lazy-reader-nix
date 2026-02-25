@@ -19,6 +19,8 @@ source "${_DIR}/lib/audio.sh"
 source "${_DIR}/lib/tts.sh"
 # shellcheck source=scripts/lib/explainer.sh
 source "${_DIR}/lib/explainer.sh"
+# shellcheck source=scripts/lib/solver.sh
+source "${_DIR}/lib/solver.sh"
 
 start_reading() {
   validate_config
@@ -53,6 +55,25 @@ explain_selection() {
   explained_text="$(run_explainer "$text")"
 
   speak_text "$explained_text" "Reading explanation..."
+}
+
+solve_selection() {
+  validate_config
+
+  local text
+  text="$(read_selection)"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "No selected text found. Highlight a snippet and press your solve shortcut."
+    exit 1
+  fi
+
+  text="$(trim_text "$text" "$MAX_CHARS")"
+
+  local solved_text
+  solved_text="$(run_problem_solver "$text")"
+
+  speak_text "$solved_text" "Reading solution..."
 }
 
 main() {
@@ -90,8 +111,14 @@ main() {
         exit 0
       fi
       ;;
+    solve)
+      if is_running; then
+        stop_running_reader
+        exit 0
+      fi
+      ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|explain]"
+      notify "Usage: lazy-reader [toggle|start|stop|status|explain|solve]"
       exit 1
       ;;
   esac
@@ -102,6 +129,8 @@ main() {
 
   if [[ "${1:-toggle}" == "explain" ]]; then
     explain_selection
+  elif [[ "${1:-toggle}" == "solve" ]]; then
+    solve_selection
   else
     start_reading
   fi

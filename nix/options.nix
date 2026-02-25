@@ -118,4 +118,28 @@
     default = true;
     description = "Clear GNOME default Super+A binding (toggle-application-view / app grid) to avoid shortcut conflict when gnomeExplainShortcut is <Super>a.";
   };
+
+  problemSolverCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = "Shell command that receives selected text on stdin and prints a concise solution/answer to stdout. Leave empty to disable problem-solver mode.";
+  };
+
+  problemSolverMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 2400;
+    description = "Maximum selected characters passed to problemSolverCommand.";
+  };
+
+  enableProblemSolverInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader solve.";
+  };
+
+  gnomeProblemSolverShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>p";
+    description = "GNOME keybinding string used to trigger problem-solver mode.";
+  };
 }

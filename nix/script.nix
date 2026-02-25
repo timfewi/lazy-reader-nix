@@ -1,4 +1,9 @@
-{ cfg, pkgs, lib, ... }:
+{
+  cfg,
+  pkgs,
+  lib,
+  ...
+}:
 let
   resolvedModel =
     if cfg.modelUrl != null then
@@ -44,6 +49,8 @@ pkgs.writeShellApplication {
     export LAZY_READER_SPEED="''${LAZY_READER_SPEED:-${toString cfg.speed}}"
     export LAZY_READER_EXPLAIN_CMD=''${LAZY_READER_EXPLAIN_CMD:-${lib.escapeShellArg cfg.explainCommand}}
     export LAZY_READER_EXPLAIN_MAX_CHARS="''${LAZY_READER_EXPLAIN_MAX_CHARS:-${toString cfg.explainMaxChars}}"
+    export LAZY_READER_PROBLEM_SOLVER_CMD=''${LAZY_READER_PROBLEM_SOLVER_CMD:-${lib.escapeShellArg cfg.problemSolverCommand}}
+    export LAZY_READER_PROBLEM_SOLVER_MAX_CHARS="''${LAZY_READER_PROBLEM_SOLVER_MAX_CHARS:-${toString cfg.problemSolverMaxChars}}"
     exec ${pkgs.bash}/bin/bash ${../scripts}/lazy-reader.sh "$@"
   '';
 }

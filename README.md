@@ -26,7 +26,7 @@ Import the module in your NixOS config:
     enable = true;
     gnomeShortcut = "<Super>s";
     # clearDefaultSuperSInGnome = true;
-    speed = 1.4;
+    speed = 1.20;
 
     # Optional
     # autoBindInGnome = true;
@@ -39,11 +39,14 @@ Import the module in your NixOS config:
     # speaker = 0;
     # audioPlayer = "mpv";
     # streamPlayback = true;
-    # enableExplainInGnome = true;           # set to true to register Super+A binding
-    # gnomeExplainShortcut = "<Super>a";     # default shortcut for explain mode
-    # clearDefaultSuperAInGnome = true;      # clears GNOME app-grid shortcut (Super+A)
-    # explainCommand = "ollama run qwen2.5-coder:7b 'Explain this code briefly:'";  # required for explain mode
-    # explainMaxChars = 2400;
+    enableExplainInGnome = true;
+    gnomeExplainShortcut = "<Super>a";
+    explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
+
+    # enableProblemSolverInGnome = true;     # set to true to register Super+P binding
+    # gnomeProblemSolverShortcut = "<Super>p"; # default shortcut for solver mode
+    # problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
+    # problemSolverMaxChars = 2400;
   };
 }
 ```
@@ -93,6 +96,7 @@ When both path- and URL-based options are set, URL-based options take precedence
 2. Press `Super+S` to start reading.
 3. Press `Super+S` again while reading to stop immediately.
 4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
+5. (Optional) Press `Super+P` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
 
 If no text is selected, it shows a notification.
 
@@ -112,6 +116,7 @@ lazy-reader start
 lazy-reader stop
 lazy-reader status
 lazy-reader explain
+lazy-reader solve
 ```
 
 If this works, your script is fine and only keybinding setup remains.
@@ -176,12 +181,56 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the OpenRouter script:
 
-- `LAZY_READER_EXPLAIN_MODEL` (default: `openai/gpt-4o-mini`)
-- `LAZY_READER_EXPLAIN_MAX_TOKENS` (default: `120`)
-- `LAZY_READER_EXPLAIN_TEMPERATURE` (default: `0.1`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
 
+Current defaults in `scripts/explain-openrouter.sh` are fixed to:
+
+- model: `x-ai/grok-4.1-fast`
+- max tokens: `1200`
+- temperature: `0.1`
+
+If you want these configurable via environment variables, edit that script.
+
 Default explain hotkey in GNOME is `services.lazy-reader.gnomeExplainShortcut = "<Super>a"` (GNOME app grid is cleared automatically via `clearDefaultSuperAInGnome = true`).
+
+### Problem-solver mode (selected snippet → thoughtful answer → speech)
+
+Problem-solver mode is disabled until you configure a solver command.
+
+The command must:
+
+- read selected text from stdin,
+- print the answer/solution to stdout.
+
+Example with a local Ollama model:
+
+```nix
+services.lazy-reader = {
+  enableProblemSolverInGnome = true;
+  gnomeProblemSolverShortcut = "<Super>p";  # default
+  problemSolverCommand = ''
+    ollama run qwen2.5-coder:7b "Give a practical solution to this:\n$(cat)"
+  '';
+};
+```
+
+Example with OpenRouter command moved into this repo:
+
+```nix
+services.lazy-reader = {
+  enableProblemSolverInGnome = true;
+  gnomeProblemSolverShortcut = "<Super>p";
+  problemSolverMaxChars = 1200;
+  problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the OpenRouter solver script:
+
+- `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `2400`)
+- `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.2`)
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
 
 ## Verify GNOME keybinding state
 
@@ -207,6 +256,10 @@ gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/or
 # Explain binding (when enableExplainInGnome = true)
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ command
+
+# Problem-solver binding (when enableProblemSolverInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ command
 ```
 
 Inspect user service logs:
@@ -222,7 +275,7 @@ Re-apply binding immediately (without logout):
 systemctl --user restart lazy-reader-bind-gnome.service
 ```
 
-If you changed shell env vars or explain command behavior, run that restart command so GNOME re-reads the command binding.
+If you changed shell env vars or explain/solver command behavior, run that restart command so GNOME re-reads the command binding.
 
 ## Troubleshooting
 
