@@ -142,4 +142,10 @@
     default = "<Super>q";
     description = "GNOME keybinding string used to trigger problem-solver mode.";
   };
+
+  clearDefaultSuperQInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Clear Super+Q from GNOME default window-close binding to avoid shortcut conflict when gnomeProblemSolverShortcut is <Super>q.";
+  };
 }

@@ -100,6 +100,30 @@ pkgs.writeShellApplication {
                 solver_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader solve"'
                 solver_shortcut='${cfg.gnomeProblemSolverShortcut}'
 
+                ${lib.optionalString cfg.clearDefaultSuperQInGnome ''
+                          if [[ "$solver_shortcut" == "<Super>q" ]]; then
+                            current_close="$(gsettings get org.gnome.desktop.wm.keybindings close)"
+                            updated_close="$(python3 - "$current_close" <<'PY'
+                  import ast
+                  import sys
+
+                  raw = sys.argv[1].strip()
+                  if raw.startswith("@as"):
+                      raw = "[]"
+
+                  try:
+                      data = ast.literal_eval(raw)
+                  except Exception:
+                      data = []
+
+                  data = [item for item in data if item != "<Super>q"]
+                  print("[" + ", ".join(repr(item) for item in data) + "]")
+                  PY
+                            )"
+                            gsettings set org.gnome.desktop.wm.keybindings close "$updated_close" || true
+                          fi
+                ''}
+
                 current_s="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
 
                 updated_s="$(python3 - "$current_s" "$solver_key_path" <<'PY'

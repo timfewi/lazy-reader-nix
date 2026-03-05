@@ -45,6 +45,7 @@ Import the module in your NixOS config:
 
     # enableProblemSolverInGnome = true;     # set to true to register Super+Q binding
     # gnomeProblemSolverShortcut = "<Super>q"; # default shortcut for solver mode
+    # clearDefaultSuperQInGnome = true; # removes <Super>q from GNOME window-close binding
     # problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
     # problemSolverMaxChars = 2400;
   };
@@ -97,6 +98,7 @@ When both path- and URL-based options are set, URL-based options take precedence
 3. Press `Super+S` again while reading to stop immediately.
 4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
 5. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
+6. Press the same shortcut again while running (`Super+S`, `Super+A`, or `Super+Q`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -231,6 +233,9 @@ Optional runtime tuning vars for the OpenRouter solver script:
 - `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `1600`)
 - `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
+
+Default solver hotkey in GNOME is `services.lazy-reader.gnomeProblemSolverShortcut = "<Super>q"`.
+When using `Super+Q`, the module can remove GNOME's default close-window conflict automatically via `clearDefaultSuperQInGnome = true`.
 
 ## Verify GNOME keybinding state
 
