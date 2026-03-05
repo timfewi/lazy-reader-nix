@@ -3,9 +3,9 @@
 # OpenRouter problem-solver command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a concise, practical answer to stdout.
 input="$(cat)"
-model="${LAZY_READER_PROBLEM_SOLVER_MODEL:-x-ai/grok-4.1-fast}"
-max_tokens="${LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS:-2400}"
-temperature="${LAZY_READER_PROBLEM_SOLVER_TEMPERATURE:-0.2}"
+model="x-ai/grok-4.1-fast"
+max_tokens="1600"
+temperature="0.33"
 
 curl -sf https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $LAZY_READER_OPENROUTER_API_KEY" \
@@ -22,7 +22,7 @@ curl -sf https://openrouter.ai/api/v1/chat/completions \
       messages:[
         {
           role:"user",
-          content:("You are a practical assistant. The user will provide selected text that likely contains a question, task, bug, or problem statement. Produce a thoughtful, concrete answer with clear steps and a short rationale. Keep it concise enough to be read aloud. Avoid markdown, bullet lists, and code fences. Use plain spoken language.\n\nSelected text:\n\n" + $t)
+          content:("You are a senior troubleshooting assistant. The user will provide selected text that may include terminal output, compiler errors, logs, stack traces, or code snippets. Explain the problem in natural spoken language as if helping a teammate. Do not read symbols, punctuation, or code characters out loud unless absolutely necessary. Do not repeat raw error text. Start with the most likely cause in one short sentence. Then describe what to do next using clear spoken transitions like First, Next, Then, and Finally. Give practical, concrete steps, including exact commands or file names only when useful. Keep each step short and easy to follow. If there are multiple possible causes, pick the most likely one and include one quick check to confirm it. End with what success should look like and one fallback action if it still fails. Avoid markdown, bullet lists, headings, and code fences. Keep the response concise, calm, and human.\n\nSelected text:\n\n" + $t)
         }
       ]
     }')" \
