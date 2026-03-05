@@ -43,8 +43,8 @@ Import the module in your NixOS config:
     gnomeExplainShortcut = "<Super>a";
     explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
 
-    # enableProblemSolverInGnome = true;     # set to true to register Super+P binding
-    # gnomeProblemSolverShortcut = "<Super>p"; # default shortcut for solver mode
+    # enableProblemSolverInGnome = true;     # set to true to register Super+Q binding
+    # gnomeProblemSolverShortcut = "<Super>q"; # default shortcut for solver mode
     # problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
     # problemSolverMaxChars = 2400;
   };
@@ -96,7 +96,7 @@ When both path- and URL-based options are set, URL-based options take precedence
 2. Press `Super+S` to start reading.
 3. Press `Super+S` again while reading to stop immediately.
 4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
-5. (Optional) Press `Super+P` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
+5. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
 
 If no text is selected, it shows a notification.
 
@@ -207,7 +207,7 @@ Example with a local Ollama model:
 ```nix
 services.lazy-reader = {
   enableProblemSolverInGnome = true;
-  gnomeProblemSolverShortcut = "<Super>p";  # default
+  gnomeProblemSolverShortcut = "<Super>q";  # default
   problemSolverCommand = ''
     ollama run qwen2.5-coder:7b "Give a practical solution to this:\n$(cat)"
   '';
@@ -219,7 +219,7 @@ Example with OpenRouter command moved into this repo:
 ```nix
 services.lazy-reader = {
   enableProblemSolverInGnome = true;
-  gnomeProblemSolverShortcut = "<Super>p";
+  gnomeProblemSolverShortcut = "<Super>q";
   problemSolverMaxChars = 1200;
   problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
 };
@@ -228,8 +228,8 @@ services.lazy-reader = {
 Optional runtime tuning vars for the OpenRouter solver script:
 
 - `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `x-ai/grok-4.1-fast`)
-- `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `2400`)
-- `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.2`)
+- `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `1600`)
+- `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
 
 ## Verify GNOME keybinding state

@@ -139,7 +139,7 @@
 
   gnomeProblemSolverShortcut = lib.mkOption {
     type = lib.types.str;
-    default = "<Super>p";
+    default = "<Super>q";
     description = "GNOME keybinding string used to trigger problem-solver mode.";
   };
 }

@@ -5,7 +5,7 @@
 input="$(cat)"
 model="x-ai/grok-4.1-fast"
 max_tokens="1600"
-temperature="0.33"
+temperature="0.12"
 
 curl -sf https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $LAZY_READER_OPENROUTER_API_KEY" \
