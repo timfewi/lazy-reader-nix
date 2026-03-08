@@ -38,6 +38,7 @@ pkgs.writeShellApplication {
     piper-tts
     procps
     wl-clipboard
+    zenity
   ];
   text = ''
     export LAZY_READER_MODEL="${resolvedModel}"
@@ -51,6 +52,8 @@ pkgs.writeShellApplication {
     export LAZY_READER_EXPLAIN_MAX_CHARS="''${LAZY_READER_EXPLAIN_MAX_CHARS:-${toString cfg.explainMaxChars}}"
     export LAZY_READER_PROBLEM_SOLVER_CMD=''${LAZY_READER_PROBLEM_SOLVER_CMD:-${lib.escapeShellArg cfg.problemSolverCommand}}
     export LAZY_READER_PROBLEM_SOLVER_MAX_CHARS="''${LAZY_READER_PROBLEM_SOLVER_MAX_CHARS:-${toString cfg.problemSolverMaxChars}}"
+    export LAZY_READER_ASK_CMD=''${LAZY_READER_ASK_CMD:-${lib.escapeShellArg cfg.askCommand}}
+    export LAZY_READER_ASK_MAX_CHARS="''${LAZY_READER_ASK_MAX_CHARS:-${toString cfg.askMaxChars}}"
     exec ${pkgs.bash}/bin/bash ${../scripts}/lazy-reader.sh "$@"
   '';
 }

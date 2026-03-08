@@ -21,6 +21,8 @@ source "${_DIR}/lib/tts.sh"
 source "${_DIR}/lib/explainer.sh"
 # shellcheck source=scripts/lib/solver.sh
 source "${_DIR}/lib/solver.sh"
+# shellcheck source=scripts/lib/asker.sh
+source "${_DIR}/lib/asker.sh"
 
 start_reading() {
   validate_config
@@ -76,6 +78,42 @@ solve_selection() {
   speak_text "$solved_text" "Reading solution..."
 }
 
+ask_selection() {
+  validate_config
+
+  local text
+  text="$(read_selection)"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "No selected text found. Highlight a snippet and press your ask shortcut."
+    exit 1
+  fi
+
+  text="$(trim_text "$text" "$MAX_CHARS")"
+
+  local answered_text
+  local answer_file
+  local ask_status
+  answer_file="$(mktemp)"
+  if run_asker "$text" > "$answer_file"; then
+    answered_text="$(cat "$answer_file")"
+  else
+    ask_status=$?
+    rm -f "$answer_file"
+    if [[ "$ask_status" -eq 2 ]]; then
+      exit 0
+    fi
+    exit "$ask_status"
+  fi
+  rm -f "$answer_file"
+
+  if [[ -z "${answered_text//[[:space:]]/}" ]]; then
+    exit 0
+  fi
+
+  speak_text "$answered_text" "Reading answer..."
+}
+
 main() {
   mkdir -p "$RUNTIME_DIR"
   cleanup_stale_pid_file
@@ -117,8 +155,14 @@ main() {
         exit 0
       fi
       ;;
+    ask)
+      if is_running; then
+        stop_running_reader
+        exit 0
+      fi
+      ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|explain|solve]"
+      notify "Usage: lazy-reader [toggle|start|stop|status|explain|solve|ask]"
       exit 1
       ;;
   esac
@@ -131,6 +175,8 @@ main() {
     explain_selection
   elif [[ "${1:-toggle}" == "solve" ]]; then
     solve_selection
+  elif [[ "${1:-toggle}" == "ask" ]]; then
+    ask_selection
   else
     start_reading
   fi

@@ -27,6 +27,7 @@ run_validate() {
     LAZY_READER_MAX_CHARS=100 \
     LAZY_READER_EXPLAIN_MAX_CHARS=100 \
     LAZY_READER_PROBLEM_SOLVER_MAX_CHARS=100 \
+    LAZY_READER_ASK_MAX_CHARS=100 \
     "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
     "$@" \
     bash -c "
@@ -115,6 +116,16 @@ run_validate() {
 
 @test "validate_config: fails when MAX_CHARS is non-numeric" {
   run_validate LAZY_READER_MAX_CHARS=lots
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when ASK_MAX_CHARS is zero" {
+  run_validate LAZY_READER_ASK_MAX_CHARS=0
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when ASK_MAX_CHARS is non-numeric" {
+  run_validate LAZY_READER_ASK_MAX_CHARS=lots
   [ "$status" -ne 0 ]
 }
 

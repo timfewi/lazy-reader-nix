@@ -148,4 +148,33 @@
     default = true;
     description = "Clear Super+Q from GNOME default window-close binding to avoid shortcut conflict when gnomeProblemSolverShortcut is <Super>q.";
   };
+
+  askCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = ''
+      Shell command for ask mode. Receives selected text on stdin and the
+      user's typed follow-up question in the LAZY_READER_ASK_QUESTION
+      environment variable, then prints an answer to stdout. Leave empty to
+      disable ask mode.
+    '';
+  };
+
+  askMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 2400;
+    description = "Maximum characters of ask command output passed to TTS.";
+  };
+
+  enableAskInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader ask.";
+  };
+
+  gnomeAskShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super><Shift>a";
+    description = "GNOME keybinding string used to trigger ask mode (default: Super+Shift+A).";
+  };
 }

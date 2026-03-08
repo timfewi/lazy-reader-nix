@@ -98,7 +98,8 @@ When both path- and URL-based options are set, URL-based options take precedence
 3. Press `Super+S` again while reading to stop immediately.
 4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
 5. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
-6. Press the same shortcut again while running (`Super+S`, `Super+A`, or `Super+Q`) to stop/cancel immediately.
+6. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
+7. Press the same shortcut again while running (`Super+S`, `Super+A`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -119,6 +120,7 @@ lazy-reader stop
 lazy-reader status
 lazy-reader explain
 lazy-reader solve
+lazy-reader ask
 ```
 
 If this works, your script is fine and only keybinding setup remains.
@@ -237,6 +239,76 @@ Optional runtime tuning vars for the OpenRouter solver script:
 Default solver hotkey in GNOME is `services.lazy-reader.gnomeProblemSolverShortcut = "<Super>q"`.
 When using `Super+Q`, the module can remove GNOME's default close-window conflict automatically via `clearDefaultSuperQInGnome = true`.
 
+### Ask mode (selected text + typed question → answer → speech)
+
+Ask mode lets you highlight a passage, press `Super+Shift+A`, type a free-form question in a small GNOME dialog, and hear the answer spoken aloud.  It is distinct from explain mode: explain summarises; ask answers your specific question.
+
+Ask mode is disabled until you configure an ask command.
+
+The command must:
+
+- read selected text from **stdin**,
+- read the user's typed question from the **`LAZY_READER_ASK_QUESTION`** environment variable,
+- print the answer to stdout.
+
+Example with a local Ollama model:
+
+```nix
+services.lazy-reader = {
+  enableAskInGnome = true;
+  gnomeAskShortcut = "<Super><Shift>a";  # default
+  askCommand = ''
+    ollama run qwen2.5-coder:7b \
+      "Context:\n$(cat)\n\nQuestion: $LAZY_READER_ASK_QUESTION\n\nAnswer concisely."
+  '';
+};
+```
+
+Example with OpenRouter command moved into this repo (cleaner `configuration.nix`):
+
+```nix
+services.lazy-reader = {
+  enableAskInGnome = true;
+  gnomeAskShortcut = "<Super><Shift>a";  # default
+  askMaxChars = 1200;
+  askCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/ask-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the OpenRouter ask script:
+
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
+
+Current defaults in `scripts/ask-openrouter.sh` are fixed to:
+
+- model: `x-ai/grok-4.1-fast`
+- max tokens: `1200`
+- temperature: `0.2`
+
+If you want these configurable via environment variables, edit that script.
+
+**Command contract summary:**
+
+| Channel | Content |
+|---------|---------|
+| stdin | Selected text (trimmed to `maxChars`) |
+| `LAZY_READER_ASK_QUESTION` env var | Typed question from the zenity dialog |
+| stdout | Answer text (trimmed to `askMaxChars`, then spoken) |
+
+**Flow:**
+1. Press `Super+Shift+A` — script captures selected text.
+2. A small `zenity` entry dialog appears: *"Your question about the selected text:"*
+3. Type your question and press Enter (or Cancel to abort gracefully).
+4. The ask command runs with the text on stdin and the question in `LAZY_READER_ASK_QUESTION`.
+5. The answer is spoken aloud by Piper TTS.
+
+Quick manual test:
+
+```bash
+wl-copy --primary "The mitochondria is the powerhouse of the cell."
+LAZY_READER_ASK_CMD='printf "It produces ATP via cellular respiration."' lazy-reader ask
+```
+
 ## Verify GNOME keybinding state
 
 Check whether GNOME still owns `Super+S`:
@@ -265,6 +337,10 @@ gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/or
 # Problem-solver binding (when enableProblemSolverInGnome = true)
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ command
+
+# Ask binding (when enableAskInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-ask/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-ask/ command
 ```
 
 Inspect user service logs:
@@ -322,7 +398,7 @@ bash tests/run.sh
 This runs two suites:
 
 1. **Syntax checks** (`tests/syntax.sh`) — `bash -n` on every shell script and `nix-instantiate --parse` on every Nix file.
-2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, and the main dispatch logic.
+2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, `run_problem_solver`, `run_asker`, and the main dispatch logic.
 
 `bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
 

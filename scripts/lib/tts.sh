@@ -26,6 +26,11 @@ validate_config() {
     exit 1
   fi
 
+  if ! [[ "$ASK_MAX_CHARS" =~ ^[0-9]+$ ]] || (( ASK_MAX_CHARS <= 0 )); then
+    notify "Invalid ask max chars '$ASK_MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
   if [[ ! -f "$MODEL" ]]; then
     notify "Piper model not found at '$MODEL'. Set services.lazy-reader.model to a valid .onnx file path."
     exit 1
