@@ -309,6 +309,8 @@ wl-copy --primary "The mitochondria is the powerhouse of the cell."
 LAZY_READER_ASK_CMD='printf "It produces ATP via cellular respiration."' lazy-reader ask
 ```
 
+After running `lazy-reader ask`, type your question into the Zenity prompt so the command can answer it in context.
+
 ## Verify GNOME keybinding state
 
 Check whether GNOME still owns `Super+S`:

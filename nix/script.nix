@@ -31,8 +31,10 @@ pkgs.writeShellApplication {
   runtimeInputs = with pkgs; [
     bash
     coreutils
+    curl
     ffmpeg
     gawk
+    jq
     libnotify
     mpv
     piper-tts

@@ -21,7 +21,7 @@ check() {
 
 echo "Bash syntax:"
 for f in \
-    "${REPO_ROOT}/scripts/lazy-reader.sh" \
+    "${REPO_ROOT}/scripts/"*.sh \
     "${REPO_ROOT}/scripts/lib/"*.sh; do
   check "${f#"${REPO_ROOT}/"}" bash -n "$f"
 done
