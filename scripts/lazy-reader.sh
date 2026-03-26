@@ -19,6 +19,8 @@ source "${_DIR}/lib/audio.sh"
 source "${_DIR}/lib/tts.sh"
 # shellcheck source=scripts/lib/explainer.sh
 source "${_DIR}/lib/explainer.sh"
+# shellcheck source=scripts/lib/summarizer.sh
+source "${_DIR}/lib/summarizer.sh"
 # shellcheck source=scripts/lib/solver.sh
 source "${_DIR}/lib/solver.sh"
 # shellcheck source=scripts/lib/asker.sh
@@ -57,6 +59,25 @@ explain_selection() {
   explained_text="$(run_explainer "$text")"
 
   speak_text "$explained_text" "Reading explanation..."
+}
+
+summarize_selection() {
+  validate_config
+
+  local text
+  text="$(read_selection)"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "No selected text found. Highlight a passage and press your summarize shortcut."
+    exit 1
+  fi
+
+  text="$(trim_text "$text" "$SUMMARIZE_INPUT_MAX_CHARS")"
+
+  local summarized_text
+  summarized_text="$(run_summarizer "$text")"
+
+  speak_text "$summarized_text" "Reading summary..."
 }
 
 solve_selection() {
@@ -149,6 +170,12 @@ main() {
         exit 0
       fi
       ;;
+    summarize)
+      if is_running; then
+        stop_running_reader
+        exit 0
+      fi
+      ;;
     solve)
       if is_running; then
         stop_running_reader
@@ -162,7 +189,7 @@ main() {
       fi
       ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|explain|solve|ask]"
+      notify "Usage: lazy-reader [toggle|start|stop|status|explain|summarize|solve|ask]"
       exit 1
       ;;
   esac
@@ -173,6 +200,8 @@ main() {
 
   if [[ "${1:-toggle}" == "explain" ]]; then
     explain_selection
+  elif [[ "${1:-toggle}" == "summarize" ]]; then
+    summarize_selection
   elif [[ "${1:-toggle}" == "solve" ]]; then
     solve_selection
   elif [[ "${1:-toggle}" == "ask" ]]; then

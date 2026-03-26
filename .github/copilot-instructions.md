@@ -9,13 +9,16 @@ A NixOS module (`services.lazy-reader`) that reads highlighted text aloud using 
 ## Validation commands
 
 ```bash
-# Validate all shell files
+# Primary repo validation
+bash tests/run.sh
+
+# Focused shell syntax checks
 for f in scripts/lazy-reader.sh scripts/lib/*.sh; do bash -n "$f"; done
 
 # Validate a single shell file
 bash -n scripts/lib/tts.sh
 
-# Validate all Nix files
+# Focused Nix syntax checks
 for f in lazy-reader.nix default.nix nix/*.nix; do nix-instantiate --parse "$f"; done
 
 # Full rebuild + smoke test (on a NixOS machine)
@@ -38,7 +41,10 @@ lazy-reader status
 | `scripts/lib/audio.sh`     | `play_audio` (file), `play_audio_stream` (stdin pipe) for mpv/ffplay                                           |
 | `scripts/lib/tts.sh`       | `validate_config`, `speak_text` (streaming first, temp-file fallback)                                          |
 | `scripts/lib/explainer.sh` | `run_explainer` — pipes selection through `LAZY_READER_EXPLAIN_CMD`                                            |
-| `scripts/lazy-reader.sh`   | Sources libs; `start_reading`, `explain_selection`, `main`                                                     |
+| `scripts/lib/summarizer.sh` | `run_summarizer` — pipes selection through `LAZY_READER_SUMMARIZE_CMD`                                        |
+| `scripts/lib/solver.sh`     | `run_problem_solver` — pipes selection through `LAZY_READER_PROBLEM_SOLVER_CMD`                               |
+| `scripts/lib/asker.sh`      | `prompt_question`, `run_asker` — captures a typed follow-up via zenity, exposes `LAZY_READER_ASK_QUESTION`   |
+| `scripts/lazy-reader.sh`    | Sources libs; `start_reading`, `explain_selection`, `summarize_selection`, `solve_selection`, `ask_selection`, `main` |
 
 ### Nix (`lazy-reader.nix` + `nix/`)
 
@@ -59,6 +65,8 @@ The `nix/script.nix` wrapper exports all `LAZY_READER_*` env vars from Nix optio
 - **Env var precedence**: `LAZY_READER_SPEED` (and similar) use `${LAZY_READER_SPEED:-<nix-value>}` so runtime env overrides Nix config.
 - **Speed encoding**: Piper uses `--length-scale` which is `1 / speed`; the conversion happens in `speak_text` via `awk`. The same `speed` value is used for local playback in mpv/ffplay.
 - **Streaming first, file fallback**: `speak_text` pipes `piper -f -` into the player; only falls back to a temp `.wav` file if streaming fails.
+- **Streaming toggle is env-only**: `LAZY_READER_STREAM_PLAYBACK` exists as a runtime env var, but there is no `services.lazy-reader.streamPlayback` Nix option.
+- **Current modes**: read, explain, summarize, solve, and ask are all first-class flows with separate GNOME shortcut options.
 - **`clearDefaultSuperSInGnome` default is `true`**: the module clears GNOME's own `Super+S` binding to avoid conflicts.
 - **No secrets, no machine-specific paths** should be committed.
 - Update `README.md` when behavior or options change.

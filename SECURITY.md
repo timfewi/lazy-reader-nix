@@ -18,5 +18,6 @@ Instead, report privately with:
 ## Security notes for users
 
 - Keep your API key in environment variables, not in tracked files.
+- The bundled `*-openrouter.sh` helper scripts send selected text to OpenRouter; do not use them for sensitive text unless you accept that trade-off.
 - Review local shell startup files if you use `source ~/.zshrc` in keybindings.
 - Treat selected clipboard/primary text as sensitive user data.

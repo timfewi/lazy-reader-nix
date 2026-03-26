@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Integration tests for scripts/lazy-reader.sh — main() dispatch logic.
 # External tools (piper, mpv, wl-paste, notify-send) are stubbed via PATH.
-# Tests cover: status, stop, start, explain, solve, ask, unknown-command routing.
+# Tests cover: status, stop, start, explain, summarize, solve, ask, unknown-command routing.
 
 load 'helpers/common'
 
@@ -112,8 +112,18 @@ run_lr() {
 }
 
 # ---------------------------------------------------------------------------
-# Unknown command
+# summarize / solve / ask — already running
 # ---------------------------------------------------------------------------
+
+@test "summarize: exits 0 and stops reading when already running" {
+  sleep 100 &
+  HELPER_PID=$!
+  echo "$HELPER_PID" > "${XDG_RUNTIME_DIR}/lazy-reader.pid"
+  run_lr summarize
+  [ "$status" -eq 0 ]
+  [ ! -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]
+  ! kill -0 "$HELPER_PID" 2>/dev/null
+}
 
 @test "solve: exits 0 and stops reading when already running" {
   sleep 100 &
@@ -134,6 +144,10 @@ run_lr() {
   [ ! -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]
   ! kill -0 "$HELPER_PID" 2>/dev/null
 }
+
+# ---------------------------------------------------------------------------
+# Unknown command
+# ---------------------------------------------------------------------------
 
 @test "unknown command: exits non-zero" {
   run_lr notacommand

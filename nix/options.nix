@@ -98,7 +98,7 @@
   explainMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
     default = 2400;
-    description = "Maximum selected characters passed to explainCommand.";
+     description = "Maximum characters of explainCommand output passed to TTS.";
   };
 
   enableExplainInGnome = lib.mkOption {
@@ -117,6 +117,39 @@
     type = lib.types.bool;
     default = true;
     description = "Clear GNOME default Super+A binding (toggle-application-view / app grid) to avoid shortcut conflict when gnomeExplainShortcut is <Super>a.";
+  };
+
+  summarizeCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = ''
+      Shell command that receives selected text on stdin and prints a concise
+      spoken summary to stdout. Leave empty to disable summarize mode.
+    '';
+  };
+
+  summarizeMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 3200;
+    description = "Maximum characters of summarizeCommand output passed to TTS.";
+  };
+
+  summarizeInputMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 6000;
+    description = "Maximum selected characters passed to summarizeCommand before backend processing.";
+  };
+
+  enableSummarizeInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader summarize.";
+  };
+
+  gnomeSummarizeShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>w";
+    description = "GNOME keybinding string used to trigger summarize mode.";
   };
 
   problemSolverCommand = lib.mkOption {

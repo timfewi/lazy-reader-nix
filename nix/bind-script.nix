@@ -95,6 +95,41 @@ pkgs.writeShellApplication {
                 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$explain_key_path" binding "$explain_shortcut"
         ''}
 
+        ${lib.optionalString cfg.enableSummarizeInGnome ''
+                summarize_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/'
+                summarize_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader summarize"'
+                summarize_shortcut='${cfg.gnomeSummarizeShortcut}'
+
+                current_sum="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+
+                updated_sum="$(python3 - "$current_sum" "$summarize_key_path" <<'PY'
+          import ast
+          import sys
+
+          raw = sys.argv[1].strip()
+          needle = sys.argv[2]
+
+          if raw.startswith("@as"):
+              raw = "[]"
+
+          try:
+              data = ast.literal_eval(raw)
+          except Exception:
+              data = []
+
+          if needle not in data:
+              data.append(needle)
+
+          print("[" + ", ".join(repr(item) for item in data) + "]")
+          PY
+          )"
+
+                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_sum"
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" name 'Lazy Reader Summarize'
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" command "$summarize_command"
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" binding "$summarize_shortcut"
+        ''}
+
                 ${lib.optionalString cfg.enableProblemSolverInGnome ''
                 solver_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/'
                 solver_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader solve"'

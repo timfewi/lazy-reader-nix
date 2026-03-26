@@ -1,6 +1,6 @@
 # lazy-reader-nix
 
-Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland).
+Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional explain, summarize, solve, and ask modes.
 
 ## What this repo provides
 
@@ -10,6 +10,15 @@ Reads currently selected text out loud with local Piper Text-to-Speech when you 
   - synthesizes speech locally with `piper`,
   - plays returned audio via `mpv` or `ffplay`.
 - GNOME binding automation via user systemd service.
+
+## Privacy and optional hosted backends
+
+Core text-to-speech playback is local: Piper runs on your machine and audio stays local.
+
+The optional bundled `*-openrouter.sh` helper scripts are different: they send the
+selected text to OpenRouter before the spoken result comes back. Keep API keys in
+environment variables, not tracked files, and only use hosted helpers for text you
+are comfortable sending to a third-party service.
 
 ## Enable in NixOS
 
@@ -38,15 +47,21 @@ Import the module in your NixOS config:
     # modelConfigSha256 = "sha256-...";
     # speaker = 0;
     # audioPlayer = "mpv";
-    # streamPlayback = true;
     enableExplainInGnome = true;
     gnomeExplainShortcut = "<Super>a";
-    explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
+    explainCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/explain-openrouter.sh;
+    enableSummarizeInGnome = true;
+    gnomeSummarizeShortcut = "<Super>w";
+    summarizeInputMaxChars = 6000;
+    summarizeCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/summarize-openrouter.sh;
+    # enableAskInGnome = true;
+    # gnomeAskShortcut = "<Super><Shift>a";
+    # askCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/ask-openrouter.sh;
 
     # enableProblemSolverInGnome = true;     # set to true to register Super+Q binding
     # gnomeProblemSolverShortcut = "<Super>q"; # default shortcut for solver mode
     # clearDefaultSuperQInGnome = true; # removes <Super>q from GNOME window-close binding
-    # problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
+    # problemSolverCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
     # problemSolverMaxChars = 2400;
   };
 }
@@ -96,10 +111,11 @@ When both path- and URL-based options are set, URL-based options take precedence
 1. Highlight text with mouse in any window.
 2. Press `Super+S` to start reading.
 3. Press `Super+S` again while reading to stop immediately.
-4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain selected code/text and read the explanation aloud.
-5. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
-6. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-7. Press the same shortcut again while running (`Super+S`, `Super+A`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
+4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter selected snippet and read the clarification aloud.
+5. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
+6. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
+7. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
+8. Press the same shortcut again while running (`Super+S`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -119,6 +135,7 @@ lazy-reader start
 lazy-reader stop
 lazy-reader status
 lazy-reader explain
+lazy-reader summarize
 lazy-reader solve
 lazy-reader ask
 ```
@@ -140,20 +157,23 @@ Default is now `1.4` if you do not set anything.
 
 `speed` now controls both Piper synthesis speed and local playback speed.
 
-You can also override at runtime (because shortcut runs through `zsh -lc`):
+You can also override at runtime (because the GNOME shortcut runs through `zsh -lc`):
 
 ```bash
 export LAZY_READER_SPEED=1.3
 export LAZY_READER_STREAM_PLAYBACK=1
 ```
 
+`LAZY_READER_STREAM_PLAYBACK` is a runtime environment toggle today, not a Nix
+module option.
+
 Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy-reader.speed`).
 
 `LAZY_READER_PLAYBACK_SPEED` is still accepted as a legacy fallback for compatibility, but `LAZY_READER_SPEED` is preferred.
 
-### Explain mode (selected snippet → explanation → speech)
+### Explain mode (selected snippet → clarification → speech)
 
-Explain mode is disabled until you configure an explainer command.
+Explain mode is disabled until you configure an explainer command. It is best for shorter snippets where you want a quick teaching-style clarification rather than a broad passage summary.
 
 The command must:
 
@@ -179,7 +199,7 @@ services.lazy-reader = {
   enableExplainInGnome = true;
   gnomeExplainShortcut = "<Super>a";
   explainMaxChars = 1000; # recommended 700-1200 for lower latency
-  explainCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/explain-openrouter.sh;
+  explainCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/explain-openrouter.sh;
 };
 ```
 
@@ -196,6 +216,50 @@ Current defaults in `scripts/explain-openrouter.sh` are fixed to:
 If you want these configurable via environment variables, edit that script.
 
 Default explain hotkey in GNOME is `services.lazy-reader.gnomeExplainShortcut = "<Super>a"` (GNOME app grid is cleared automatically via `clearDefaultSuperAInGnome = true`).
+
+### Summarize mode (selected passage → spoken summary → speech)
+
+Summarize mode is disabled until you configure a summarizer command. It is distinct from explain mode: summarize compresses longer passages, while explain teaches or clarifies shorter snippets.
+
+The command must:
+
+- read selected text from stdin,
+- print the spoken summary to stdout.
+
+Example with a local Ollama model:
+
+```nix
+services.lazy-reader = {
+  enableSummarizeInGnome = true;
+  gnomeSummarizeShortcut = "<Super>w";  # default
+  summarizeMaxChars = 3200;
+  summarizeInputMaxChars = 6000;
+  summarizeCommand = ''
+    ollama run qwen2.5:7b "Summarize this passage for listening aloud:\n$(cat)"
+  '';
+};
+```
+
+Example with the bundled OpenRouter script:
+
+```nix
+services.lazy-reader = {
+  enableSummarizeInGnome = true;
+  gnomeSummarizeShortcut = "<Super>w";
+  summarizeMaxChars = 3200; # larger spoken-output budget than explain
+  summarizeInputMaxChars = 6000; # larger default input budget than explain
+  summarizeCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/summarize-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the bundled summarize script:
+
+- `LAZY_READER_SUMMARIZE_MODEL` (default: `x-ai/grok-4.20-multi-agent-beta`)
+- `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `2200`)
+- `LAZY_READER_SUMMARIZE_TEMPERATURE` (default: `0.15`)
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
+
+By default, summarize mode accepts up to `services.lazy-reader.summarizeInputMaxChars = 6000` selected characters before backend processing, which is intentionally larger than the typical explain flow. The spoken summary is still capped separately by `services.lazy-reader.summarizeMaxChars`, which defaults to `3200`.
 
 ### Problem-solver mode (selected snippet → thoughtful answer → speech)
 
@@ -225,7 +289,7 @@ services.lazy-reader = {
   enableProblemSolverInGnome = true;
   gnomeProblemSolverShortcut = "<Super>q";
   problemSolverMaxChars = 1200;
-  problemSolverCommand = builtins.readFile /home/tim/projects/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
+  problemSolverCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
 };
 ```
 
@@ -241,7 +305,7 @@ When using `Super+Q`, the module can remove GNOME's default close-window conflic
 
 ### Ask mode (selected text + typed question → answer → speech)
 
-Ask mode lets you highlight a passage, press `Super+Shift+A`, type a free-form question in a small GNOME dialog, and hear the answer spoken aloud.  It is distinct from explain mode: explain summarises; ask answers your specific question.
+Ask mode lets you highlight a passage, press `Super+Shift+A`, type a free-form question in a small GNOME dialog, and hear the answer spoken aloud. It is distinct from the other assistant modes: explain clarifies shorter snippets, summarize compresses longer passages, and ask answers your specific question.
 
 Ask mode is disabled until you configure an ask command.
 
@@ -336,6 +400,10 @@ gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/or
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ command
 
+# Summarize binding (when enableSummarizeInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/ command
+
 # Problem-solver binding (when enableProblemSolverInGnome = true)
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/ command
@@ -358,7 +426,7 @@ Re-apply binding immediately (without logout):
 systemctl --user restart lazy-reader-bind-gnome.service
 ```
 
-If you changed shell env vars or explain/solver command behavior, run that restart command so GNOME re-reads the command binding.
+If you changed shell env vars or explain/summarize/solver/ask command behavior, run that restart command so GNOME re-reads the command binding.
 
 ## Troubleshooting
 
@@ -397,12 +465,20 @@ If you changed shell env vars or explain/solver command behavior, run that resta
 bash tests/run.sh
 ```
 
-This runs two suites:
+This is the primary repository validation command. It runs two suites:
 
 1. **Syntax checks** (`tests/syntax.sh`) — `bash -n` on every shell script and `nix-instantiate --parse` on every Nix file.
-2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, `run_problem_solver`, `run_asker`, and the main dispatch logic.
+2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, `run_summarizer`, `run_problem_solver`, `run_asker`, and the main dispatch logic.
 
 `bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
+
+Focused syntax-only checks are also available:
+
+```bash
+bash -n scripts/lazy-reader.sh
+for f in scripts/lib/*.sh; do bash -n "$f"; done
+for f in lazy-reader.nix default.nix nix/*.nix; do nix-instantiate --parse "$f"; done
+```
 
 ## License
 

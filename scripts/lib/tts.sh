@@ -21,6 +21,16 @@ validate_config() {
     exit 1
   fi
 
+  if ! [[ "$SUMMARIZE_MAX_CHARS" =~ ^[0-9]+$ ]] || (( SUMMARIZE_MAX_CHARS <= 0 )); then
+    notify "Invalid summarize max chars '$SUMMARIZE_MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
+  if ! [[ "$SUMMARIZE_INPUT_MAX_CHARS" =~ ^[0-9]+$ ]] || (( SUMMARIZE_INPUT_MAX_CHARS <= 0 )); then
+    notify "Invalid summarize input max chars '$SUMMARIZE_INPUT_MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
   if ! [[ "$PROBLEM_SOLVER_MAX_CHARS" =~ ^[0-9]+$ ]] || (( PROBLEM_SOLVER_MAX_CHARS <= 0 )); then
     notify "Invalid problem solver max chars '$PROBLEM_SOLVER_MAX_CHARS'. Use a positive integer."
     exit 1
