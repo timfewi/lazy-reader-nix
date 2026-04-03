@@ -115,14 +115,14 @@
 
   gnomeNarrateShortcut = lib.mkOption {
     type = lib.types.str;
-    default = "<Super>n";
+    default = "<Super>e";
     description = "GNOME keybinding string used to trigger narrate mode.";
   };
 
   clearDefaultSuperNInGnome = lib.mkOption {
     type = lib.types.bool;
     default = true;
-    description = "Clear GNOME default Super+N binding (focus-active-notification) to avoid shortcut conflict when gnomeNarrateShortcut is <Super>n.";
+    description = "Deprecated no-op kept for backward compatibility after the default narrate shortcut moved from Super+N to Super+E.";
   };
 
   explainCommand = lib.mkOption {

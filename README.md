@@ -49,7 +49,7 @@ Import the module in your NixOS config:
     # speaker = 0;
     # audioPlayer = "mpv";
     enableNarrateInGnome = true;
-    gnomeNarrateShortcut = "<Super>n";
+    gnomeNarrateShortcut = "<Super>e";
     narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
     enableExplainInGnome = true;
     gnomeExplainShortcut = "<Super>a";
@@ -115,12 +115,12 @@ When both path- and URL-based options are set, URL-based options take precedence
 1. Highlight text with mouse in any window.
 2. Press `Super+S` to start reading. Longer plain-reader selections are spoken in sentence/paragraph-aware Piper chunks instead of being hard-cut at one raw character limit.
 3. Press `Super+S` again while reading to stop immediately.
-4. (Optional) Press `Super+N` (when `enableNarrateInGnome = true`) to rewrite selected docs/code/config into natural spoken language and read that narration aloud.
+4. (Optional) Press `Super+E` (when `enableNarrateInGnome = true`) to rewrite selected docs/code/config into natural spoken language and read that narration aloud.
 5. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter selected snippet and read the clarification aloud.
 6. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
 7. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
 8. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-9. Press the same shortcut again while running (`Super+S`, `Super+N`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
+9. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -202,7 +202,7 @@ Example with the bundled OpenRouter helper:
 ```nix
 services.lazy-reader = {
   enableNarrateInGnome = true;
-  gnomeNarrateShortcut = "<Super>n";  # default
+  gnomeNarrateShortcut = "<Super>e";  # default
   narrateMaxChars = 2400;
   narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
 };
@@ -217,7 +217,7 @@ Optional runtime tuning vars for the bundled narrate script:
 - `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
 
-Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>n"`. When using that default, the module can remove GNOME's conflicting notification shortcut automatically via `clearDefaultSuperNInGnome = true`.
+Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>e"`. No extra GNOME conflict-clearing option is needed for that default. Older configs may still mention `clearDefaultSuperNInGnome`; it is now a deprecated no-op for backward compatibility.
 
 ### Explain mode (selected snippet → clarification → speech)
 

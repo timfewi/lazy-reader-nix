@@ -59,12 +59,6 @@ pkgs.writeShellApplication {
                 narrate_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader narrate"'
                 narrate_shortcut='${cfg.gnomeNarrateShortcut}'
 
-                ${lib.optionalString cfg.clearDefaultSuperNInGnome ''
-                  if [[ "$narrate_shortcut" == "<Super>n" ]]; then
-                    gsettings set org.gnome.shell.keybindings focus-active-notification "[]" || true
-                  fi
-                ''}
-
                 current_n="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
 
                 updated_n="$(python3 - "$current_n" "$narrate_key_path" <<'PY'
