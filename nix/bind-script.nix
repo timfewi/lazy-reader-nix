@@ -54,6 +54,47 @@ pkgs.writeShellApplication {
         gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$key_path" command "$command"
         gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$key_path" binding "$shortcut"
 
+        ${lib.optionalString cfg.enableNarrateInGnome ''
+                narrate_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-narrate/'
+                narrate_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader narrate"'
+                narrate_shortcut='${cfg.gnomeNarrateShortcut}'
+
+                ${lib.optionalString cfg.clearDefaultSuperNInGnome ''
+                  if [[ "$narrate_shortcut" == "<Super>n" ]]; then
+                    gsettings set org.gnome.shell.keybindings focus-active-notification "[]" || true
+                  fi
+                ''}
+
+                current_n="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+
+                updated_n="$(python3 - "$current_n" "$narrate_key_path" <<'PY'
+          import ast
+          import sys
+
+          raw = sys.argv[1].strip()
+          needle = sys.argv[2]
+
+          if raw.startswith("@as"):
+              raw = "[]"
+
+          try:
+              data = ast.literal_eval(raw)
+          except Exception:
+              data = []
+
+          if needle not in data:
+              data.append(needle)
+
+          print("[" + ", ".join(repr(item) for item in data) + "]")
+          PY
+          )"
+
+                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_n"
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" name 'Lazy Reader Narrate'
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" command "$narrate_command"
+                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" binding "$narrate_shortcut"
+        ''}
+
         ${lib.optionalString cfg.enableExplainInGnome ''
                 explain_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/'
                 explain_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader explain"'

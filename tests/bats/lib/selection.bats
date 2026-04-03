@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Tests for scripts/lib/selection.sh
-# Covers: trim_text (pure), read_selection (stubbed wl-paste)
+# Covers: trim_text (pure), chunk_text_for_reading, read_selection (stubbed wl-paste)
 
 load '../helpers/common'
 
@@ -14,6 +14,13 @@ setup() {
 
 teardown() {
   teardown_tmpdir
+}
+
+collect_chunks() {
+  CHUNKS=()
+  while IFS= read -r -d '' chunk; do
+    CHUNKS+=("$chunk")
+  done < <(chunk_text_for_reading "$1" "$2")
 }
 
 # ---------------------------------------------------------------------------
@@ -47,6 +54,40 @@ teardown() {
     result="$(trim_text "$input" "$max")"
     (( ${#result} <= max ))
   done
+}
+
+# ---------------------------------------------------------------------------
+# chunk_text_for_reading — chunking invariants
+# ---------------------------------------------------------------------------
+
+@test "chunk_text_for_reading: returns one chunk when text fits" {
+  collect_chunks "hello world" 50
+  [ "${#CHUNKS[@]}" -eq 1 ]
+  [ "${CHUNKS[0]}" = "hello world" ]
+}
+
+@test "chunk_text_for_reading: prefers sentence boundaries for long text" {
+  collect_chunks "First sentence. Second sentence. Third sentence." 25
+  [ "${#CHUNKS[@]}" -eq 3 ]
+  [ "${CHUNKS[0]}" = "First sentence." ]
+  [ "${CHUNKS[1]}" = "Second sentence." ]
+  [ "${CHUNKS[2]}" = "Third sentence." ]
+}
+
+@test "chunk_text_for_reading: prefers paragraph boundaries before raw truncation" {
+  collect_chunks $'First paragraph.\n\nSecond paragraph.' 25
+  [ "${#CHUNKS[@]}" -eq 2 ]
+  [ "${CHUNKS[0]}" = "First paragraph." ]
+  [ "${CHUNKS[1]}" = "Second paragraph." ]
+}
+
+@test "chunk_text_for_reading: falls back to hard splits for long words" {
+  collect_chunks "supercalifragilisticexpialidocious" 10
+  [ "${#CHUNKS[@]}" -eq 4 ]
+  [ "${CHUNKS[0]}" = "supercalif" ]
+  [ "${CHUNKS[1]}" = "ragilistic" ]
+  [ "${CHUNKS[2]}" = "expialidoc" ]
+  [ "${CHUNKS[3]}" = "ious" ]
 }
 
 # ---------------------------------------------------------------------------

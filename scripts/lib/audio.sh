@@ -5,13 +5,13 @@ play_audio() {
 
   case "$PLAYER" in
     mpv)
-      mpv --no-terminal --really-quiet --audio-display=no --speed="$SPEED" "$audio_file" &
+      mpv --no-terminal --really-quiet --audio-display=no --speed="$PLAYBACK_SPEED" "$audio_file" &
       PLAYER_PID="$!"
       wait "$PLAYER_PID"
       PLAYER_PID=""
       ;;
     ffplay)
-      ffplay -nodisp -autoexit -loglevel error -af "atempo=${SPEED}" "$audio_file" &
+      ffplay -nodisp -autoexit -loglevel error -af "atempo=${PLAYBACK_SPEED}" "$audio_file" &
       PLAYER_PID="$!"
       wait "$PLAYER_PID"
       PLAYER_PID=""
@@ -26,10 +26,10 @@ play_audio() {
 play_audio_stream() {
   case "$PLAYER" in
     mpv)
-      mpv --no-terminal --really-quiet --audio-display=no --speed="$SPEED" -
+      mpv --no-terminal --really-quiet --audio-display=no --speed="$PLAYBACK_SPEED" -
       ;;
     ffplay)
-      ffplay -nodisp -autoexit -loglevel error -af "atempo=${SPEED}" -i pipe:0
+      ffplay -nodisp -autoexit -loglevel error -af "atempo=${PLAYBACK_SPEED}" -i pipe:0
       ;;
     *)
       notify "Unsupported audio player: $PLAYER"

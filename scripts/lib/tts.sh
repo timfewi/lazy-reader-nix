@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
 validate_config() {
-  if ! [[ "$SPEED" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
-    notify "Invalid speed '$SPEED'. Use a number like 1.0, 1.3, or 1.4."
+  if ! [[ "$SPEED" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v speed="$SPEED" 'BEGIN { exit !(speed > 0) }'; then
+    notify "Invalid speed '$SPEED'. Use a positive number like 1.0, 1.3, or 1.4."
+    exit 1
+  fi
+
+  if ! [[ "$PLAYBACK_SPEED" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v speed="$PLAYBACK_SPEED" 'BEGIN { exit !(speed > 0) }'; then
+    notify "Invalid playback speed '$PLAYBACK_SPEED'. Use a positive number like 1.0, 1.3, or 1.4."
     exit 1
   fi
 
@@ -13,6 +18,11 @@ validate_config() {
 
   if ! [[ "$MAX_CHARS" =~ ^[0-9]+$ ]] || (( MAX_CHARS <= 0 )); then
     notify "Invalid max chars '$MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
+  if ! [[ "$NARRATE_MAX_CHARS" =~ ^[0-9]+$ ]] || (( NARRATE_MAX_CHARS <= 0 )); then
+    notify "Invalid narrate max chars '$NARRATE_MAX_CHARS'. Use a positive integer."
     exit 1
   fi
 
@@ -76,7 +86,9 @@ speak_text() {
     piper_cmd+=( --data-dir "$PIPER_DATA_DIR" )
   fi
 
-  notify "$started_message"
+  if [[ -n "$started_message" ]]; then
+    notify "$started_message"
+  fi
 
   if [[ "$STREAM_PLAYBACK" == "1" ]]; then
     if ! printf '%s' "$text" | "${piper_cmd[@]}" -f - 2>/dev/null | play_audio_stream >/dev/null 2>&1; then

@@ -1,6 +1,6 @@
 # lazy-reader-nix
 
-Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional explain, summarize, solve, and ask modes.
+Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, and ask modes.
 
 ## What this repo provides
 
@@ -36,6 +36,7 @@ Import the module in your NixOS config:
     gnomeShortcut = "<Super>s";
     # clearDefaultSuperSInGnome = true;
     speed = 1.20;
+    # playbackSpeed = 1.0;
 
     # Optional
     # autoBindInGnome = true;
@@ -47,6 +48,9 @@ Import the module in your NixOS config:
     # modelConfigSha256 = "sha256-...";
     # speaker = 0;
     # audioPlayer = "mpv";
+    enableNarrateInGnome = true;
+    gnomeNarrateShortcut = "<Super>n";
+    narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
     enableExplainInGnome = true;
     gnomeExplainShortcut = "<Super>a";
     explainCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/explain-openrouter.sh;
@@ -109,13 +113,14 @@ When both path- and URL-based options are set, URL-based options take precedence
 ## Behavior
 
 1. Highlight text with mouse in any window.
-2. Press `Super+S` to start reading.
+2. Press `Super+S` to start reading. Longer plain-reader selections are spoken in sentence/paragraph-aware Piper chunks instead of being hard-cut at one raw character limit.
 3. Press `Super+S` again while reading to stop immediately.
-4. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter selected snippet and read the clarification aloud.
-5. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
-6. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
-7. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-8. Press the same shortcut again while running (`Super+S`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
+4. (Optional) Press `Super+N` (when `enableNarrateInGnome = true`) to rewrite selected docs/code/config into natural spoken language and read that narration aloud.
+5. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter selected snippet and read the clarification aloud.
+6. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
+7. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
+8. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
+9. Press the same shortcut again while running (`Super+S`, `Super+N`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -134,6 +139,7 @@ Manual controls:
 lazy-reader start
 lazy-reader stop
 lazy-reader status
+lazy-reader narrate
 lazy-reader explain
 lazy-reader summarize
 lazy-reader solve
@@ -150,26 +156,68 @@ Set speed in Nix and rebuild:
 services.lazy-reader.speed = 1.3;
 ```
 
-`1.0` is normal speed, `1.3` / `1.4` are faster.
+`1.0` is normal speed, `1.3` / `1.4` are faster for Piper synthesis.
 Runtime env vars also accept aliases: `slow` (`0.8`), `normal` (`1.0`), `fast` (`1.4`).
 
 Default is now `1.4` if you do not set anything.
 
-`speed` now controls both Piper synthesis speed and local playback speed.
+`speed` now controls Piper synthesis speed only.
+
+Local playback speed is separate and defaults to natural-speed playback:
+
+```nix
+services.lazy-reader.playbackSpeed = 1.0;
+```
+
+You can set `playbackSpeed = config.services.lazy-reader.speed;` if you want the older combined-speed behavior back.
 
 You can also override at runtime (because the GNOME shortcut runs through `zsh -lc`):
 
 ```bash
 export LAZY_READER_SPEED=1.3
+export LAZY_READER_PLAYBACK_SPEED=1.0
 export LAZY_READER_STREAM_PLAYBACK=1
 ```
 
 `LAZY_READER_STREAM_PLAYBACK` is a runtime environment toggle today, not a Nix
 module option.
 
-Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy-reader.speed`).
+Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy-reader.speed`, `LAZY_READER_PLAYBACK_SPEED` / `services.lazy-reader.playbackSpeed`).
 
-`LAZY_READER_PLAYBACK_SPEED` is still accepted as a legacy fallback for compatibility, but `LAZY_READER_SPEED` is preferred.
+Compatibility note: older setups may remember `LAZY_READER_SPEED` feeling faster because playback was also accelerated. To restore that exact behavior, set `playbackSpeed` (or `LAZY_READER_PLAYBACK_SPEED`) equal to `speed`.
+
+### Narrate mode (selected text → spoken rewrite → speech)
+
+Narrate mode is for selections that are awkward to hear verbatim: technical documentation, source code, configs, logs, shell commands, or mixed prose + code. Unlike plain read mode, narrate rewrites the selection into smoother spoken language before Piper reads it aloud. Unlike explain mode, it stays close to the original content instead of turning it into a short teaching-oriented clarification. Unlike summarize mode, it tries to preserve the important details rather than aggressively compressing them. Unlike ask mode, it does not prompt for a follow-up question.
+
+Narrate mode is disabled until you configure a narrator command.
+
+The command must:
+
+- read selected text from stdin,
+- print a spoken-style narration to stdout.
+
+Example with the bundled OpenRouter helper:
+
+```nix
+services.lazy-reader = {
+  enableNarrateInGnome = true;
+  gnomeNarrateShortcut = "<Super>n";  # default
+  narrateMaxChars = 2400;
+  narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
+};
+```
+
+The bundled `scripts/narrate-openrouter.sh` helper is meant for docs/code-heavy selections: it keeps the meaning and important identifiers, but rewrites the text into calmer spoken language that is easier to follow over TTS.
+
+Optional runtime tuning vars for the bundled narrate script:
+
+- `LAZY_READER_NARRATE_MODEL` (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_NARRATE_MAX_TOKENS` (default: `1800`)
+- `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
+- `LAZY_READER_OPENROUTER_API_KEY` (required)
+
+Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>n"`. When using that default, the module can remove GNOME's conflicting notification shortcut automatically via `clearDefaultSuperNInGnome = true`.
 
 ### Explain mode (selected snippet → clarification → speech)
 
@@ -400,6 +448,10 @@ gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/or
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/ command
 
+# Narrate binding (when enableNarrateInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-narrate/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-narrate/ command
+
 # Summarize binding (when enableSummarizeInGnome = true)
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/ command
@@ -426,7 +478,7 @@ Re-apply binding immediately (without logout):
 systemctl --user restart lazy-reader-bind-gnome.service
 ```
 
-If you changed shell env vars or explain/summarize/solver/ask command behavior, run that restart command so GNOME re-reads the command binding.
+If you changed shell env vars or narrate/explain/summarize/solver/ask command behavior, run that restart command so GNOME re-reads the command binding.
 
 ## Troubleshooting
 
@@ -468,7 +520,7 @@ bash tests/run.sh
 This is the primary repository validation command. It runs two suites:
 
 1. **Syntax checks** (`tests/syntax.sh`) — `bash -n` on every shell script and `nix-instantiate --parse` on every Nix file.
-2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_explainer`, `run_summarizer`, `run_problem_solver`, `run_asker`, and the main dispatch logic.
+2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_narrator`, `run_explainer`, `run_summarizer`, `run_problem_solver`, `run_asker`, the bundled `narrate-openrouter.sh` helper contract, and the main dispatch logic.
 
 `bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
 

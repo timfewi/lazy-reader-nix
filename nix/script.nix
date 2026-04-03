@@ -50,6 +50,9 @@ pkgs.writeShellApplication {
     export LAZY_READER_MAX_CHARS="${toString cfg.maxChars}"
     export LAZY_READER_PLAYER="${cfg.audioPlayer}"
     export LAZY_READER_SPEED="''${LAZY_READER_SPEED:-${toString cfg.speed}}"
+    export LAZY_READER_PLAYBACK_SPEED="''${LAZY_READER_PLAYBACK_SPEED:-${toString cfg.playbackSpeed}}"
+    export LAZY_READER_NARRATE_CMD=''${LAZY_READER_NARRATE_CMD:-${lib.escapeShellArg cfg.narrateCommand}}
+    export LAZY_READER_NARRATE_MAX_CHARS="''${LAZY_READER_NARRATE_MAX_CHARS:-${toString cfg.narrateMaxChars}}"
     export LAZY_READER_EXPLAIN_CMD=''${LAZY_READER_EXPLAIN_CMD:-${lib.escapeShellArg cfg.explainCommand}}
     export LAZY_READER_EXPLAIN_MAX_CHARS="''${LAZY_READER_EXPLAIN_MAX_CHARS:-${toString cfg.explainMaxChars}}"
     export LAZY_READER_SUMMARIZE_CMD=''${LAZY_READER_SUMMARIZE_CMD:-${lib.escapeShellArg cfg.summarizeCommand}}

@@ -80,13 +80,49 @@
   maxChars = lib.mkOption {
     type = lib.types.ints.positive;
     default = 2400;
-    description = "Maximum selected characters sent to Piper TTS.";
+    description = "Maximum characters per Piper chunk for plain reading, and maximum selected characters sent to explain/solve/ask preprocessing.";
   };
 
   speed = lib.mkOption {
     type = lib.types.addCheck lib.types.float (value: value >= 0.25 && value <= 4.0);
     default = 1.4;
-    description = "Speech speed multiplier (0.25 to 4.0) used for both Piper synthesis and local playback.";
+    description = "Piper synthesis speed multiplier (0.25 to 4.0).";
+  };
+
+  playbackSpeed = lib.mkOption {
+    type = lib.types.addCheck lib.types.float (value: value >= 0.25 && value <= 4.0);
+    default = 1.0;
+    description = "Local audio playback speed multiplier (0.25 to 4.0). Set equal to speed to restore the previous combined-speed behavior.";
+  };
+
+  narrateCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = "Shell command that receives selected text on stdin and prints a spoken-style narration to stdout. Leave empty to disable narrate mode.";
+  };
+
+  narrateMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 2400;
+    description = "Maximum characters of narrateCommand output passed to TTS.";
+  };
+
+  enableNarrateInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader narrate.";
+  };
+
+  gnomeNarrateShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>n";
+    description = "GNOME keybinding string used to trigger narrate mode.";
+  };
+
+  clearDefaultSuperNInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Clear GNOME default Super+N binding (focus-active-notification) to avoid shortcut conflict when gnomeNarrateShortcut is <Super>n.";
   };
 
   explainCommand = lib.mkOption {

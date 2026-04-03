@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Integration tests for scripts/lazy-reader.sh — main() dispatch logic.
 # External tools (piper, mpv, wl-paste, notify-send) are stubbed via PATH.
-# Tests cover: status, stop, start, explain, summarize, solve, ask, unknown-command routing.
+# Tests cover: status, stop, start, narrate, explain, summarize, solve, ask, unknown-command routing.
 
 load 'helpers/common'
 
@@ -95,6 +95,153 @@ run_lr() {
   echo "$HELPER_PID" > "${XDG_RUNTIME_DIR}/lazy-reader.pid"
   run_lr start
   [ "$status" -eq 0 ]
+}
+
+@test "start: reads long selections in sentence-aware chunks" {
+  local chunk_log="${TEST_TMPDIR}/chunks.log"
+
+  make_stub "wl-paste" 'printf "%s" "$LAZY_READER_TEST_SELECTION"'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s\n--chunk--\n" "$input" >> "$LAZY_READER_TEST_CHUNK_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_MAX_CHARS=25" \
+    "LAZY_READER_TEST_SELECTION=First sentence. Second sentence. Third sentence." \
+    "LAZY_READER_TEST_CHUNK_LOG=${chunk_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" start
+
+  [ "$status" -eq 0 ]
+  run bash -c "grep -c '^--chunk--$' '${chunk_log}'"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 3 ]
+  run bash -c "head -n 1 '${chunk_log}'"
+  [ "$status" -eq 0 ]
+  [ "$output" = "First sentence." ]
+}
+
+@test "stop: cancels an active chunked read" {
+  local chunk_log="${TEST_TMPDIR}/chunks-stop.log"
+
+  make_stub "wl-paste" 'printf "%s" "$LAZY_READER_TEST_SELECTION"'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s\n--chunk--\n" "$input" >> "$LAZY_READER_TEST_CHUNK_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'sleep 60'
+
+  env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_MAX_CHARS=25" \
+    "LAZY_READER_TEST_SELECTION=First sentence. Second sentence. Third sentence." \
+    "LAZY_READER_TEST_CHUNK_LOG=${chunk_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" start &
+  HELPER_PID=$!
+
+  for _ in {1..40}; do
+    [[ -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]] && break
+    sleep 0.05
+  done
+
+  [ -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]
+
+  run_lr stop
+  [ "$status" -eq 0 ]
+
+  wait "$HELPER_PID" 2>/dev/null || true
+  ! kill -0 "$HELPER_PID" 2>/dev/null
+  [ ! -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]
+}
+
+# ---------------------------------------------------------------------------
+# narrate
+# ---------------------------------------------------------------------------
+
+@test "narrate: rewrites the trimmed selection before speech" {
+  local speech_log="${TEST_TMPDIR}/narrate.log"
+
+  make_stub "wl-paste" 'printf "%s" "$LAZY_READER_TEST_SELECTION"'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s" "$input" > "$LAZY_READER_TEST_SPEECH_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_MAX_CHARS=5" \
+    "LAZY_READER_NARRATE_MAX_CHARS=30" \
+    "LAZY_READER_NARRATE_CMD=input=\"\$(cat)\"; printf \"Narrated: %s\" \"\$input\"" \
+    "LAZY_READER_TEST_SELECTION=abcdefghij" \
+    "LAZY_READER_TEST_SPEECH_LOG=${speech_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" narrate
+
+  [ "$status" -eq 0 ]
+
+  run cat "${speech_log}"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Narrated: abcde" ]
+}
+
+@test "narrate: exits 0 and stops reading when already running" {
+  sleep 100 &
+  HELPER_PID=$!
+  echo "$HELPER_PID" > "${XDG_RUNTIME_DIR}/lazy-reader.pid"
+  run_lr narrate
+  [ "$status" -eq 0 ]
+  [ ! -f "${XDG_RUNTIME_DIR}/lazy-reader.pid" ]
+  ! kill -0 "$HELPER_PID" 2>/dev/null
 }
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,8 @@ source "${_DIR}/lib/selection.sh"
 source "${_DIR}/lib/audio.sh"
 # shellcheck source=scripts/lib/tts.sh
 source "${_DIR}/lib/tts.sh"
+# shellcheck source=scripts/lib/narrator.sh
+source "${_DIR}/lib/narrator.sh"
 # shellcheck source=scripts/lib/explainer.sh
 source "${_DIR}/lib/explainer.sh"
 # shellcheck source=scripts/lib/summarizer.sh
@@ -30,6 +32,8 @@ start_reading() {
   validate_config
 
   local text
+  local chunk
+  local chunk_index=0
   text="$(read_selection)"
 
   if [[ -z "${text//[[:space:]]/}" ]]; then
@@ -37,9 +41,33 @@ start_reading() {
     exit 1
   fi
 
+  while IFS= read -r -d '' chunk; do
+    if (( chunk_index == 0 )); then
+      speak_text "$chunk" "Reading selected text..."
+    else
+      speak_text "$chunk" ""
+    fi
+    ((chunk_index += 1))
+  done < <(chunk_text_for_reading "$text" "$MAX_CHARS")
+}
+
+narrate_selection() {
+  validate_config
+
+  local text
+  text="$(read_selection)"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "No selected text found. Highlight a passage and press your narrate shortcut."
+    exit 1
+  fi
+
   text="$(trim_text "$text" "$MAX_CHARS")"
 
-  speak_text "$text" "Reading selected text..."
+  local narrated_text
+  narrated_text="$(run_narrator "$text")"
+
+  speak_text "$narrated_text" "Reading narration..."
 }
 
 explain_selection() {
@@ -176,6 +204,12 @@ main() {
         exit 0
       fi
       ;;
+    narrate)
+      if is_running; then
+        stop_running_reader
+        exit 0
+      fi
+      ;;
     solve)
       if is_running; then
         stop_running_reader
@@ -189,7 +223,7 @@ main() {
       fi
       ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|explain|summarize|solve|ask]"
+      notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask]"
       exit 1
       ;;
   esac
@@ -198,7 +232,9 @@ main() {
   OWNS_PID_FILE="1"
   trap cleanup EXIT INT TERM
 
-  if [[ "${1:-toggle}" == "explain" ]]; then
+  if [[ "${1:-toggle}" == "narrate" ]]; then
+    narrate_selection
+  elif [[ "${1:-toggle}" == "explain" ]]; then
     explain_selection
   elif [[ "${1:-toggle}" == "summarize" ]]; then
     summarize_selection

@@ -23,8 +23,10 @@ run_validate() {
   run env \
     "LAZY_READER_MODEL=${MODEL_FILE}" \
     LAZY_READER_SPEED=1.4 \
+    LAZY_READER_PLAYBACK_SPEED=1.0 \
     LAZY_READER_SPEAKER=0 \
     LAZY_READER_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_MAX_CHARS=100 \
     LAZY_READER_EXPLAIN_MAX_CHARS=100 \
     LAZY_READER_SUMMARIZE_MAX_CHARS=100 \
     LAZY_READER_SUMMARIZE_INPUT_MAX_CHARS=100 \
@@ -37,6 +39,27 @@ run_validate() {
       source '${SCRIPTS_DIR}/lib/config.sh'
       source '${SCRIPTS_DIR}/lib/tts.sh'
       validate_config
+    "
+}
+
+run_config_dump() {
+  run env \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    LAZY_READER_SPEED=1.4 \
+    LAZY_READER_PLAYBACK_SPEED=1.0 \
+    LAZY_READER_SPEAKER=0 \
+    LAZY_READER_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_MAX_CHARS=100 \
+    LAZY_READER_EXPLAIN_MAX_CHARS=100 \
+    LAZY_READER_SUMMARIZE_MAX_CHARS=100 \
+    LAZY_READER_SUMMARIZE_INPUT_MAX_CHARS=100 \
+    LAZY_READER_PROBLEM_SOLVER_MAX_CHARS=100 \
+    LAZY_READER_ASK_MAX_CHARS=100 \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "$@" \
+    bash -c "
+      source '${SCRIPTS_DIR}/lib/config.sh'
+      printf 'SPEED=%s\nPLAYBACK_SPEED=%s\n' \"\$SPEED\" \"\$PLAYBACK_SPEED\"
     "
 }
 
@@ -78,6 +101,18 @@ run_validate() {
   [ "$status" -eq 0 ]
 }
 
+@test "config: LAZY_READER_SPEED does not also change PLAYBACK_SPEED by default" {
+  run_config_dump LAZY_READER_SPEED=1.3 LAZY_READER_PLAYBACK_SPEED=
+  [ "$status" -eq 0 ]
+  [ "$output" = $'SPEED=1.3\nPLAYBACK_SPEED=1.0' ]
+}
+
+@test "config: legacy PLAYBACK_SPEED still backfills SPEED when SPEED is unset" {
+  run_config_dump LAZY_READER_SPEED= LAZY_READER_PLAYBACK_SPEED=1.2
+  [ "$status" -eq 0 ]
+  [ "$output" = $'SPEED=1.2\nPLAYBACK_SPEED=1.2' ]
+}
+
 @test "validate_config: accepts SPEED alias 'normal'" {
   run_validate LAZY_READER_SPEED=normal
   [ "$status" -eq 0 ]
@@ -85,6 +120,11 @@ run_validate() {
 
 @test "validate_config: fails when legacy PLAYBACK_SPEED is unknown text" {
   run_validate LAZY_READER_SPEED= LAZY_READER_PLAYBACK_SPEED=turbo
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when PLAYBACK_SPEED is zero" {
+  run_validate LAZY_READER_PLAYBACK_SPEED=0
   [ "$status" -ne 0 ]
 }
 
@@ -118,6 +158,16 @@ run_validate() {
 
 @test "validate_config: fails when MAX_CHARS is non-numeric" {
   run_validate LAZY_READER_MAX_CHARS=lots
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when NARRATE_MAX_CHARS is zero" {
+  run_validate LAZY_READER_NARRATE_MAX_CHARS=0
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when NARRATE_MAX_CHARS is non-numeric" {
+  run_validate LAZY_READER_NARRATE_MAX_CHARS=lots
   [ "$status" -ne 0 ]
 }
 

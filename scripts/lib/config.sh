@@ -2,6 +2,7 @@
 
 # Runtime configuration — values sourced from LAZY_READER_* env vars.
 # Mutable globals used by cleanup() and play_audio*().
+# shellcheck disable=SC2034  # Shared globals are consumed by sibling sourced files.
 
 normalize_speed_alias() {
   case "${1,,}" in
@@ -26,10 +27,13 @@ readonly PIPER_DATA_DIR="${LAZY_READER_PIPER_DATA_DIR:-}"
 readonly SPEAKER="${LAZY_READER_SPEAKER:-0}"
 readonly MAX_CHARS="${LAZY_READER_MAX_CHARS:-2400}"
 readonly PLAYER="${LAZY_READER_PLAYER:-mpv}"
-# LAZY_READER_PLAYBACK_SPEED is kept as a legacy fallback for compatibility.
 SPEED="$(normalize_speed_alias "${LAZY_READER_SPEED:-${LAZY_READER_PLAYBACK_SPEED:-1.4}}")"
 readonly SPEED
+PLAYBACK_SPEED="$(normalize_speed_alias "${LAZY_READER_PLAYBACK_SPEED:-1.0}")"
+readonly PLAYBACK_SPEED
 readonly STREAM_PLAYBACK="${LAZY_READER_STREAM_PLAYBACK:-1}"
+readonly NARRATE_CMD="${LAZY_READER_NARRATE_CMD:-}"
+readonly NARRATE_MAX_CHARS="${LAZY_READER_NARRATE_MAX_CHARS:-${MAX_CHARS}}"
 readonly EXPLAIN_CMD="${LAZY_READER_EXPLAIN_CMD:-}"
 readonly EXPLAIN_MAX_CHARS="${LAZY_READER_EXPLAIN_MAX_CHARS:-${MAX_CHARS}}"
 readonly SUMMARIZE_CMD="${LAZY_READER_SUMMARIZE_CMD:-}"
