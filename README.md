@@ -186,9 +186,11 @@ Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy
 
 Compatibility note: older setups may remember `LAZY_READER_SPEED` feeling faster because playback was also accelerated. To restore that exact behavior, set `playbackSpeed` (or `LAZY_READER_PLAYBACK_SPEED`) equal to `speed`.
 
-### Narrate mode (selected text → spoken rewrite → speech)
+Long AI-generated outputs (narrate, explain, summarize, solve, ask) are also spoken in bounded Piper chunks now, using `services.lazy-reader.generatedSpeechChunkMaxChars` (default `1400`). This is meant to reduce fast/garbled synthesis on longer technical passages, at the cost of small extra pauses between long sections.
 
-Narrate mode is for selections that are awkward to hear verbatim: technical documentation, source code, configs, logs, shell commands, or mixed prose + code. Unlike plain read mode, narrate rewrites the selection into smoother spoken language before Piper reads it aloud. Unlike explain mode, it stays close to the original content instead of turning it into a short teaching-oriented clarification. Unlike summarize mode, it tries to preserve the important details rather than aggressively compressing them. Unlike ask mode, it does not prompt for a follow-up question.
+### Narrate mode (selected text → faithful spoken rendering → speech)
+
+Narrate mode is for selections that are awkward to hear verbatim: technical documentation, source code, configs, logs, shell commands, or mixed prose + code. Unlike plain read mode, narrate turns the selection into a **faithful spoken rendering** before Piper reads it aloud. Unlike explain mode, it is not supposed to invent teaching context or broad clarifications. Unlike summarize mode, it should preserve the original order, identifiers, values, and technical details rather than aggressively compressing them. Unlike ask mode, it does not prompt for a follow-up question.
 
 Narrate mode is disabled until you configure a narrator command.
 
@@ -203,18 +205,22 @@ Example with the bundled OpenRouter helper:
 services.lazy-reader = {
   enableNarrateInGnome = true;
   gnomeNarrateShortcut = "<Super>e";  # default
+  generatedSpeechChunkMaxChars = 1400;
+  narrateInputMaxChars = 4800;
   narrateMaxChars = 2400;
   narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
 };
 ```
 
-The bundled `scripts/narrate-openrouter.sh` helper is meant for docs/code-heavy selections: it keeps the meaning and important identifiers, but rewrites the text into calmer spoken language that is easier to follow over TTS.
+The bundled `scripts/narrate-openrouter.sh` helper is meant for docs/code-heavy selections: it tries to stay close to the source text, keep identifiers and exact values intact, and only smooth the content enough to make it listenable over TTS. For code or config, it should describe what is visibly present rather than freely explaining from background knowledge.
 
 Optional runtime tuning vars for the bundled narrate script:
 
 - `LAZY_READER_NARRATE_MODEL` (default: `x-ai/grok-4.1-fast`)
 - `LAZY_READER_NARRATE_MAX_TOKENS` (default: `1800`)
 - `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
+- `LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS` (default: `1400`)
+- `LAZY_READER_NARRATE_INPUT_MAX_CHARS` (default: `4800`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
 
 Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>e"`. No extra GNOME conflict-clearing option is needed for that default. Older configs may still mention `clearDefaultSuperNInGnome`; it is now a deprecated no-op for backward compatibility.

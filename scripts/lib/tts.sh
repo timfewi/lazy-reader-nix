@@ -11,6 +11,11 @@ validate_config() {
     exit 1
   fi
 
+  if ! [[ "$GENERATED_SPEECH_CHUNK_MAX_CHARS" =~ ^[0-9]+$ ]] || (( GENERATED_SPEECH_CHUNK_MAX_CHARS <= 0 )); then
+    notify "Invalid generated speech chunk max chars '$GENERATED_SPEECH_CHUNK_MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
   if ! [[ "$SPEAKER" =~ ^[0-9]+$ ]]; then
     notify "Invalid speaker '$SPEAKER'. Use a non-negative integer."
     exit 1
@@ -23,6 +28,11 @@ validate_config() {
 
   if ! [[ "$NARRATE_MAX_CHARS" =~ ^[0-9]+$ ]] || (( NARRATE_MAX_CHARS <= 0 )); then
     notify "Invalid narrate max chars '$NARRATE_MAX_CHARS'. Use a positive integer."
+    exit 1
+  fi
+
+  if ! [[ "$NARRATE_INPUT_MAX_CHARS" =~ ^[0-9]+$ ]] || (( NARRATE_INPUT_MAX_CHARS <= 0 )); then
+    notify "Invalid narrate input max chars '$NARRATE_INPUT_MAX_CHARS'. Use a positive integer."
     exit 1
   fi
 

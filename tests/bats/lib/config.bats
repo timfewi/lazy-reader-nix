@@ -24,8 +24,10 @@ run_validate() {
     "LAZY_READER_MODEL=${MODEL_FILE}" \
     LAZY_READER_SPEED=1.4 \
     LAZY_READER_PLAYBACK_SPEED=1.0 \
+    LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=100 \
     LAZY_READER_SPEAKER=0 \
     LAZY_READER_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_INPUT_MAX_CHARS=100 \
     LAZY_READER_NARRATE_MAX_CHARS=100 \
     LAZY_READER_EXPLAIN_MAX_CHARS=100 \
     LAZY_READER_SUMMARIZE_MAX_CHARS=100 \
@@ -47,8 +49,10 @@ run_config_dump() {
     "LAZY_READER_MODEL=${MODEL_FILE}" \
     LAZY_READER_SPEED=1.4 \
     LAZY_READER_PLAYBACK_SPEED=1.0 \
+    LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=100 \
     LAZY_READER_SPEAKER=0 \
     LAZY_READER_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_INPUT_MAX_CHARS=100 \
     LAZY_READER_NARRATE_MAX_CHARS=100 \
     LAZY_READER_EXPLAIN_MAX_CHARS=100 \
     LAZY_READER_SUMMARIZE_MAX_CHARS=100 \
@@ -128,6 +132,16 @@ run_config_dump() {
   [ "$status" -ne 0 ]
 }
 
+@test "validate_config: fails when GENERATED_SPEECH_CHUNK_MAX_CHARS is zero" {
+  run_validate LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=0
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when GENERATED_SPEECH_CHUNK_MAX_CHARS is non-numeric" {
+  run_validate LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=lots
+  [ "$status" -ne 0 ]
+}
+
 # ---------------------------------------------------------------------------
 # SPEAKER validation
 # ---------------------------------------------------------------------------
@@ -168,6 +182,16 @@ run_config_dump() {
 
 @test "validate_config: fails when NARRATE_MAX_CHARS is non-numeric" {
   run_validate LAZY_READER_NARRATE_MAX_CHARS=lots
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when NARRATE_INPUT_MAX_CHARS is zero" {
+  run_validate LAZY_READER_NARRATE_INPUT_MAX_CHARS=0
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when NARRATE_INPUT_MAX_CHARS is non-numeric" {
+  run_validate LAZY_READER_NARRATE_INPUT_MAX_CHARS=lots
   [ "$status" -ne 0 ]
 }
 

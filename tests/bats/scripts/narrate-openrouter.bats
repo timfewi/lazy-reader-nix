@@ -27,7 +27,7 @@ teardown() {
   teardown_tmpdir
 }
 
-@test "narrate-openrouter helper: builds the default narrated-docs payload" {
+@test "narrate-openrouter helper: builds the faithful narrated-docs payload" {
   local jq_log="${TEST_TMPDIR}/jq.log"
   local curl_log="${TEST_TMPDIR}/curl.log"
 
@@ -53,7 +53,13 @@ teardown() {
   run bash -c "grep -F -- '0.12' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- 'Rewrite the selected text for listening aloud.' '${jq_log}'"
+  run bash -c "grep -F -- 'You are a faithful spoken renderer of technical documentation and source code.' '${jq_log}'"
+  [ "$status" -eq 0 ]
+
+  run bash -c "grep -F -- 'Do not invent behavior, examples, missing context, or background knowledge' '${jq_log}'"
+  [ "$status" -eq 0 ]
+
+  run bash -c "grep -F -- 'preserve every identifier, function name, option name, flag, exact value, file path, and command' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- 'Authorization: Bearer test-key' '${curl_log}'"

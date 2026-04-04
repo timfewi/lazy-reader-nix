@@ -95,6 +95,12 @@
     description = "Local audio playback speed multiplier (0.25 to 4.0). Set equal to speed to restore the previous combined-speed behavior.";
   };
 
+  generatedSpeechChunkMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 1400;
+    description = "Maximum characters per Piper chunk for AI-generated outputs such as narrate, explain, summarize, solve, and ask.";
+  };
+
   narrateCommand = lib.mkOption {
     type = lib.types.str;
     default = "";
@@ -105,6 +111,12 @@
     type = lib.types.ints.positive;
     default = 2400;
     description = "Maximum characters of narrateCommand output passed to TTS.";
+  };
+
+  narrateInputMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 4800;
+    description = "Maximum selected characters passed to narrateCommand before backend processing.";
   };
 
   enableNarrateInGnome = lib.mkOption {

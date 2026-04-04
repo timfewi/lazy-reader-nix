@@ -51,6 +51,22 @@ start_reading() {
   done < <(chunk_text_for_reading "$text" "$MAX_CHARS")
 }
 
+speak_generated_text() {
+  local text="$1"
+  local started_message="$2"
+  local chunk
+  local chunk_index=0
+
+  while IFS= read -r -d '' chunk; do
+    if (( chunk_index == 0 )); then
+      speak_text "$chunk" "$started_message"
+    else
+      speak_text "$chunk" ""
+    fi
+    ((chunk_index += 1))
+  done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
+}
+
 narrate_selection() {
   validate_config
 
@@ -62,12 +78,12 @@ narrate_selection() {
     exit 1
   fi
 
-  text="$(trim_text "$text" "$MAX_CHARS")"
+  text="$(trim_text "$text" "$NARRATE_INPUT_MAX_CHARS")"
 
   local narrated_text
   narrated_text="$(run_narrator "$text")"
 
-  speak_text "$narrated_text" "Reading narration..."
+  speak_generated_text "$narrated_text" "Reading narration..."
 }
 
 explain_selection() {
@@ -86,7 +102,7 @@ explain_selection() {
   local explained_text
   explained_text="$(run_explainer "$text")"
 
-  speak_text "$explained_text" "Reading explanation..."
+  speak_generated_text "$explained_text" "Reading explanation..."
 }
 
 summarize_selection() {
@@ -105,7 +121,7 @@ summarize_selection() {
   local summarized_text
   summarized_text="$(run_summarizer "$text")"
 
-  speak_text "$summarized_text" "Reading summary..."
+  speak_generated_text "$summarized_text" "Reading summary..."
 }
 
 solve_selection() {
@@ -124,7 +140,7 @@ solve_selection() {
   local solved_text
   solved_text="$(run_problem_solver "$text")"
 
-  speak_text "$solved_text" "Reading solution..."
+  speak_generated_text "$solved_text" "Reading solution..."
 }
 
 ask_selection() {
@@ -160,7 +176,7 @@ ask_selection() {
     exit 0
   fi
 
-  speak_text "$answered_text" "Reading answer..."
+  speak_generated_text "$answered_text" "Reading answer..."
 }
 
 main() {

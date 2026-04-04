@@ -192,7 +192,7 @@ run_lr() {
 # narrate
 # ---------------------------------------------------------------------------
 
-@test "narrate: rewrites the trimmed selection before speech" {
+@test "narrate: uses narrate input limit instead of plain reader max chars" {
   local speech_log="${TEST_TMPDIR}/narrate.log"
 
   make_stub "wl-paste" 'printf "%s" "$LAZY_READER_TEST_SELECTION"'
@@ -220,6 +220,7 @@ run_lr() {
     "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
     "LAZY_READER_MODEL=${MODEL_FILE}" \
     "LAZY_READER_MAX_CHARS=5" \
+    "LAZY_READER_NARRATE_INPUT_MAX_CHARS=8" \
     "LAZY_READER_NARRATE_MAX_CHARS=30" \
     "LAZY_READER_NARRATE_CMD=input=\"\$(cat)\"; printf \"Narrated: %s\" \"\$input\"" \
     "LAZY_READER_TEST_SELECTION=abcdefghij" \
@@ -231,7 +232,51 @@ run_lr() {
 
   run cat "${speech_log}"
   [ "$status" -eq 0 ]
-  [ "$output" = "Narrated: abcde" ]
+  [ "$output" = "Narrated: abcdefgh" ]
+}
+
+@test "narrate: chunks long generated output before Piper synthesis" {
+  local chunk_log="${TEST_TMPDIR}/narrate-chunks.log"
+
+  make_stub "wl-paste" 'printf "%s" "$LAZY_READER_TEST_SELECTION"'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s\n--chunk--\n" "$input" >> "$LAZY_READER_TEST_CHUNK_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=18" \
+    "LAZY_READER_NARRATE_MAX_CHARS=200" \
+    "LAZY_READER_NARRATE_CMD=printf 'First generated sentence. Second generated sentence.'" \
+    "LAZY_READER_TEST_SELECTION=source text" \
+    "LAZY_READER_TEST_CHUNK_LOG=${chunk_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" narrate
+
+  [ "$status" -eq 0 ]
+  run bash -c "grep -c '^--chunk--$' '${chunk_log}'"
+  [ "$status" -eq 0 ]
+  [ "$output" -gt 1 ]
+  run bash -c "head -n 1 '${chunk_log}'"
+  [ "$status" -eq 0 ]
+  [ "$output" = "First generated" ]
 }
 
 @test "narrate: exits 0 and stops reading when already running" {
