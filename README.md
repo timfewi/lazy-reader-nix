@@ -174,7 +174,7 @@ You can set `playbackSpeed = config.services.lazy-reader.speed;` if you want the
 You can also override at runtime (because the GNOME shortcut runs through `zsh -lc`):
 
 ```bash
-export LAZY_READER_SPEED=1.3
+export LAZY_READER_SPEED=1.0
 export LAZY_READER_PLAYBACK_SPEED=1.0
 export LAZY_READER_STREAM_PLAYBACK=1
 ```

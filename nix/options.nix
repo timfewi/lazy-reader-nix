@@ -85,7 +85,7 @@
 
   speed = lib.mkOption {
     type = lib.types.addCheck lib.types.float (value: value >= 0.25 && value <= 4.0);
-    default = 1.4;
+    default = 1.0;
     description = "Piper synthesis speed multiplier (0.25 to 4.0).";
   };
 
