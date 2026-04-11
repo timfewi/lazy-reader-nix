@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -o pipefail
 
 # OpenRouter ask command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and LAZY_READER_ASK_QUESTION from the environment,
@@ -8,7 +9,7 @@ model="${LAZY_READER_ASK_MODEL:-x-ai/grok-4.1-fast}"
 max_tokens="1200"
 temperature="0.2"
 
-curl -sf https://openrouter.ai/api/v1/chat/completions \
+response=$(curl -sf https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $LAZY_READER_OPENROUTER_API_KEY" \
   -H "Content-Type: application/json" \
   -d "$(jq -n \
@@ -27,5 +28,11 @@ curl -sf https://openrouter.ai/api/v1/chat/completions \
           content:("You are a helpful assistant answering a question about a piece of text. Answer in short, natural spoken language suitable for listening aloud. Use plain words and full sentences. Do not use bullet points, markdown, code formatting, or symbols like star, dash, hash, slash, backticks, or braces. Give a concise, direct answer. If context is ambiguous, make one brief assumption and continue.\n\nContext:\n\n" + $ctx + "\n\nQuestion: " + $q)
         }
       ]
-    }')" \
-  | jq -r '.choices[0].message.content'
+    }')") || { echo "OpenRouter API request failed. Check LAZY_READER_OPENROUTER_API_KEY and network." >&2; exit 1; }
+
+content=$(echo "$response" | jq -r '.choices[0].message.content')
+if [[ -z "$content" || "$content" == "null" ]]; then
+  echo "OpenRouter returned empty or null content. Response: $response" >&2
+  exit 1
+fi
+echo "$content"
