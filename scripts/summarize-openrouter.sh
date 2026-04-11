@@ -5,8 +5,8 @@ set -o pipefail
 # Reads selected text from stdin and prints a concise spoken summary to stdout.
 input="$(cat)"
 model="${LAZY_READER_SUMMARIZE_MODEL:-openai/gpt-5.4-mini}"
-max_tokens="${LAZY_READER_SUMMARIZE_MAX_TOKENS:-2200}"
-temperature="${LAZY_READER_SUMMARIZE_TEMPERATURE:-0.15}"
+max_tokens="${LAZY_READER_SUMMARIZE_MAX_TOKENS:-3200}"
+temperature="${LAZY_READER_SUMMARIZE_TEMPERATURE:-0.12}"
 
 response=$(curl -sf https://openrouter.ai/api/v1/chat/completions \
   -H "Authorization: Bearer $LAZY_READER_OPENROUTER_API_KEY" \
