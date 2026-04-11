@@ -5,7 +5,7 @@ set -o pipefail
 # Reads selected text from stdin and prints a faithful spoken rendering to stdout.
 input="$(cat)"
 model="${LAZY_READER_NARRATE_MODEL:-x-ai/grok-4.1-fast}"
-max_tokens="${LAZY_READER_NARRATE_MAX_TOKENS:-1800}"
+max_tokens="${LAZY_READER_NARRATE_MAX_TOKENS:-2400}"
 temperature="${LAZY_READER_NARRATE_TEMPERATURE:-0.12}"
 
 response=$(curl -sf https://openrouter.ai/api/v1/chat/completions \
