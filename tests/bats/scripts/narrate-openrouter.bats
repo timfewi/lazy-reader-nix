@@ -31,7 +31,7 @@ teardown() {
   local jq_log="${TEST_TMPDIR}/jq.log"
   local curl_log="${TEST_TMPDIR}/curl.log"
 
-  run env \
+  run env -i \
     "PATH=${PATH}" \
     "LAZY_READER_OPENROUTER_API_KEY=test-key" \
     "LAZY_READER_TEST_JQ_LOG=${jq_log}" \
@@ -47,7 +47,7 @@ teardown() {
   run bash -c "grep -F -- 'x-ai/grok-4.1-fast' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- '1800' '${jq_log}'"
+  run bash -c "grep -F -- '2400' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- '0.12' '${jq_log}'"
@@ -69,7 +69,7 @@ teardown() {
 @test "narrate-openrouter helper: honors runtime tuning env vars" {
   local jq_log="${TEST_TMPDIR}/jq-override.log"
 
-  run env \
+  run env -i \
     "PATH=${PATH}" \
     "LAZY_READER_OPENROUTER_API_KEY=test-key" \
     "LAZY_READER_NARRATE_MODEL=custom/model" \

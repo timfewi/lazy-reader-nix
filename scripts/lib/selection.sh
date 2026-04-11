@@ -220,3 +220,84 @@ chunk_text_for_reading() {
     text="$(trim_leading_whitespace "${text:chunk_len}")"
   done
 }
+
+line_looks_code_like() {
+  local line="$1"
+
+  case "$line" in
+    *'```'*)
+      return 0
+      ;;
+  esac
+
+  if [[ "$line" == "{" || "$line" == "}" || "$line" == "[" || "$line" == "]" || "$line" == "(" || "$line" == ")" || "$line" == ";" ]]; then
+    return 0
+  fi
+
+  [[ "$line" =~ ^[[:space:]]{4,} ]] && return 0
+  [[ "$line" =~ ^[[:space:]]*\$[[:space:]] ]] && return 0
+
+  case "$line" in
+    *'function '*|*'fn '*|*'fn('*|*'class '*|*'def '*|*'import '*|*'export '*|*'const '*|*'let '*|*'var '*|*'return '*|*'SELECT '*|*'INSERT '*|*'UPDATE '*|*'DELETE '*|*'echo '*|*'printf '*|*'=>'*|*'::'*|*'->'*|*':='*|*'#!'*)
+      return 0
+      ;;
+  esac
+
+  if [[ "$line" == *'{'* || "$line" == *'}'* || "$line" == *'['* || "$line" == *']'* || "$line" == *';'* ]]; then
+    if [[ "$line" == *'('* || "$line" == *')'* || "$line" == *'='* || "$line" == *'<'* || "$line" == *'>'* ]]; then
+      return 0
+    fi
+  fi
+
+  if [[ "$line" == *'('* || "$line" == *')'* ]] && [[ "$line" == *'='* || "$line" == *'<'* || "$line" == *'>'* || "$line" == *';'* ]]; then
+    return 0
+  fi
+
+  return 1
+}
+
+split_text_into_reading_sections() {
+  local text="$1"
+  local line
+  local section=""
+  local section_kind=""
+  local line_kind
+
+  text="$(trim_surrounding_whitespace "$text")"
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ -z "${line//[[:space:]]/}" ]]; then
+      if [[ -n "$section" ]]; then
+        printf '%s\0%s\0' "$section_kind" "$section"
+        section=""
+        section_kind=""
+      fi
+      continue
+    fi
+
+    if line_looks_code_like "$line"; then
+      line_kind="code"
+    else
+      line_kind="prose"
+    fi
+
+    if [[ -z "$section" ]]; then
+      section="$line"
+      section_kind="$line_kind"
+      continue
+    fi
+
+    if [[ "$line_kind" == "$section_kind" ]]; then
+      section+=$'\n'"$line"
+      continue
+    fi
+
+    printf '%s\0%s\0' "$section_kind" "$section"
+    section="$line"
+    section_kind="$line_kind"
+  done <<< "$text"
+
+  if [[ -n "$section" ]]; then
+    printf '%s\0%s\0' "$section_kind" "$section"
+  fi
+}

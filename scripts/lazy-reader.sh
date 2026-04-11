@@ -34,8 +34,9 @@ start_reading() {
   validate_config
 
   local text
-  local chunk
-  local chunk_index=0
+  local section_index=0
+  local section_kind
+  local section_text
   text="$(read_selection)"
 
   if [[ -z "${text//[[:space:]]/}" ]]; then
@@ -43,14 +44,14 @@ start_reading() {
     exit 1
   fi
 
-  while IFS= read -r -d '' chunk; do
-    if (( chunk_index == 0 )); then
-      speak_text "$chunk" "Reading selected text..."
+  while IFS= read -r -d '' section_kind && IFS= read -r -d '' section_text; do
+    if (( section_index == 0 )); then
+      speak_reading_section "$section_kind" "$section_text" "Reading selected text..."
     else
-      speak_text "$chunk" ""
+      speak_reading_section "$section_kind" "$section_text" ""
     fi
-    ((chunk_index += 1))
-  done < <(chunk_text_for_reading "$text" "$MAX_CHARS")
+    ((section_index += 1))
+  done < <(split_text_into_reading_sections "$text")
 }
 
 speak_generated_text() {
@@ -67,6 +68,37 @@ speak_generated_text() {
     fi
     ((chunk_index += 1))
   done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
+}
+
+speak_reading_section() {
+  local section_kind="$1"
+  local section_text="$2"
+  local started_message="$3"
+  local chunk
+  local chunk_index=0
+
+  if [[ "$section_kind" == "code" ]]; then
+    if [[ -n "$EXPLAIN_CMD" ]]; then
+      section_text="$(trim_text "$section_text" "$MAX_CHARS")"
+      speak_generated_text "$(run_explainer "$section_text")" "$started_message"
+      return 0
+    fi
+
+    if [[ -n "$NARRATE_CMD" ]]; then
+      section_text="$(trim_text "$section_text" "$NARRATE_INPUT_MAX_CHARS")"
+      speak_generated_text "$(run_narrator "$section_text")" "$started_message"
+      return 0
+    fi
+  fi
+
+  while IFS= read -r -d '' chunk; do
+    if (( chunk_index == 0 )); then
+      speak_text "$chunk" "$started_message"
+    else
+      speak_text "$chunk" ""
+    fi
+    ((chunk_index += 1))
+  done < <(chunk_text_for_reading "$section_text" "$MAX_CHARS")
 }
 
 narrate_selection() {

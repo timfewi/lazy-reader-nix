@@ -31,7 +31,7 @@ teardown() {
   local jq_log="${TEST_TMPDIR}/jq.log"
   local curl_log="${TEST_TMPDIR}/curl.log"
 
-  run env \
+  run env -i \
     "PATH=${PATH}" \
     "LAZY_READER_OPENROUTER_API_KEY=test-key" \
     "LAZY_READER_TEST_JQ_LOG=${jq_log}" \
@@ -47,10 +47,10 @@ teardown() {
   run bash -c "grep -F -- 'openai/gpt-5.4-mini' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- '2200' '${jq_log}'"
+  run bash -c "grep -F -- '3200' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- '0.15' '${jq_log}'"
+  run bash -c "grep -F -- '0.12' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- 'Summarize the following passage for listening aloud.' '${jq_log}'"
@@ -63,7 +63,7 @@ teardown() {
 @test "summarize-openrouter helper: honors runtime model overrides" {
   local jq_log="${TEST_TMPDIR}/jq-override.log"
 
-  run env \
+  run env -i \
     "PATH=${PATH}" \
     "LAZY_READER_OPENROUTER_API_KEY=test-key" \
     "LAZY_READER_SUMMARIZE_MODEL=custom/summary-model" \

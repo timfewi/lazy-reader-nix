@@ -23,6 +23,15 @@ collect_chunks() {
   done < <(chunk_text_for_reading "$1" "$2")
 }
 
+collect_reading_sections() {
+  SECTION_KINDS=()
+  SECTION_TEXTS=()
+  while IFS= read -r -d '' kind && IFS= read -r -d '' section; do
+    SECTION_KINDS+=("$kind")
+    SECTION_TEXTS+=("$section")
+  done < <(split_text_into_reading_sections "$1")
+}
+
 # ---------------------------------------------------------------------------
 # trim_text — invariants
 # ---------------------------------------------------------------------------
@@ -88,6 +97,37 @@ collect_chunks() {
   [ "${CHUNKS[1]}" = "ragilistic" ]
   [ "${CHUNKS[2]}" = "expialidoc" ]
   [ "${CHUNKS[3]}" = "ious" ]
+}
+
+# ---------------------------------------------------------------------------
+# split_text_into_reading_sections — prose/code routing
+# ---------------------------------------------------------------------------
+
+@test "split_text_into_reading_sections: keeps prose and code blocks in order" {
+  collect_reading_sections $'Intro paragraph.\n\nfunction add(a, b) {\n  return a + b;\n}\n\nAfterwards.'
+  [ "${#SECTION_KINDS[@]}" -eq 3 ]
+  [ "${SECTION_KINDS[0]}" = "prose" ]
+  [ "${SECTION_TEXTS[0]}" = "Intro paragraph." ]
+  [ "${SECTION_KINDS[1]}" = "code" ]
+  [ "${SECTION_TEXTS[1]}" = $'function add(a, b) {\n  return a + b;\n}' ]
+  [ "${SECTION_KINDS[2]}" = "prose" ]
+  [ "${SECTION_TEXTS[2]}" = "Afterwards." ]
+}
+
+@test "split_text_into_reading_sections: keeps inline-code prose as prose" {
+  collect_reading_sections "Use foo(bar) in the docs."
+  [ "${#SECTION_KINDS[@]}" -eq 1 ]
+  [ "${SECTION_KINDS[0]}" = "prose" ]
+  [ "${SECTION_TEXTS[0]}" = "Use foo(bar) in the docs." ]
+}
+
+@test "split_text_into_reading_sections: treats shell prompt commands as code" {
+  collect_reading_sections $'$ cargo new my-project\nCreated binary (application) `my-project` package'
+  [ "${#SECTION_KINDS[@]}" -eq 2 ]
+  [ "${SECTION_KINDS[0]}" = "code" ]
+  [ "${SECTION_TEXTS[0]}" = $'$ cargo new my-project' ]
+  [ "${SECTION_KINDS[1]}" = "prose" ]
+  [ "${SECTION_TEXTS[1]}" = "Created binary (application) \`my-project\` package" ]
 }
 
 # ---------------------------------------------------------------------------
