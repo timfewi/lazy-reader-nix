@@ -64,6 +64,9 @@ pkgs.writeShellApplication {
     export LAZY_READER_PROBLEM_SOLVER_MAX_CHARS="''${LAZY_READER_PROBLEM_SOLVER_MAX_CHARS:-${toString cfg.problemSolverMaxChars}}"
     export LAZY_READER_ASK_CMD=''${LAZY_READER_ASK_CMD:-${lib.escapeShellArg cfg.askCommand}}
     export LAZY_READER_ASK_MAX_CHARS="''${LAZY_READER_ASK_MAX_CHARS:-${toString cfg.askMaxChars}}"
+    export LAZY_READER_TEACH_CMD=''${LAZY_READER_TEACH_CMD:-${lib.escapeShellArg cfg.teachCommand}}
+    export LAZY_READER_TEACH_MAX_CHARS="''${LAZY_READER_TEACH_MAX_CHARS:-${toString cfg.teachMaxChars}}"
+    export LAZY_READER_TEACH_INPUT_MAX_CHARS="''${LAZY_READER_TEACH_INPUT_MAX_CHARS:-${toString cfg.teachInputMaxChars}}"
     exec ${pkgs.bash}/bin/bash ${../scripts}/lazy-reader.sh "$@"
   '';
 }

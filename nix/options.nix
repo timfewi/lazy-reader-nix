@@ -258,4 +258,40 @@
     default = "<Super><Shift>a";
     description = "GNOME keybinding string used to trigger ask mode (default: Super+Shift+A).";
   };
+
+  teachCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = "Shell command that receives selected book text on stdin and prints a plain-language ELI5 explanation to stdout. Leave empty to disable teach mode.";
+  };
+
+  teachMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 3000;
+    description = "Maximum characters of teachCommand output passed to TTS.";
+  };
+
+  teachInputMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 5000;
+    description = "Maximum selected characters passed to teachCommand before backend processing.";
+  };
+
+  enableTeachInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader teach.";
+  };
+
+  gnomeTeachShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>p";
+    description = "GNOME keybinding string used to trigger teach mode (default: Super+P).";
+  };
+
+  clearDefaultSuperPInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Clear GNOME default Super+P binding (switch-monitor) to avoid shortcut conflict when gnomeTeachShortcut is <Super>p.";
+  };
 }

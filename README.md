@@ -1,6 +1,6 @@
 # lazy-reader-nix
 
-Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, and ask modes.
+Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, ask, and teach modes.
 
 ## What this repo provides
 
@@ -120,7 +120,8 @@ When both path- and URL-based options are set, URL-based options take precedence
 6. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
 7. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
 8. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-9. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, or `Super+Shift+A`) to stop/cancel immediately.
+9. (Optional) Press `Super+P` (when `enableTeachInGnome = true`) to get a plain-language ELI5 explanation of a selected book page and hear it aloud.
+10. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, `Super+Shift+A`, or `Super+P`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -144,6 +145,7 @@ lazy-reader explain
 lazy-reader summarize
 lazy-reader solve
 lazy-reader ask
+lazy-reader teach
 ```
 
 If this works, your script is fine and only keybinding setup remains.
@@ -186,7 +188,7 @@ Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy
 
 Compatibility note: older setups may remember `LAZY_READER_SPEED` feeling faster because playback was also accelerated. To restore that exact behavior, set `playbackSpeed` (or `LAZY_READER_PLAYBACK_SPEED`) equal to `speed`.
 
-Long AI-generated outputs (narrate, explain, summarize, solve, ask) are also spoken in bounded Piper chunks now, using `services.lazy-reader.generatedSpeechChunkMaxChars` (default `1400`). This is meant to reduce fast/garbled synthesis on longer technical passages, at the cost of small extra pauses between long sections.
+Long AI-generated outputs (narrate, explain, summarize, solve, ask, teach) are also spoken in bounded Piper chunks now, using `services.lazy-reader.generatedSpeechChunkMaxChars` (default `1400`). This is meant to reduce fast/garbled synthesis on longer technical passages, at the cost of small extra pauses between long sections.
 
 ### Narrate mode (selected text → faithful spoken rendering → speech)
 
@@ -308,7 +310,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the bundled summarize script:
 
-- `LAZY_READER_SUMMARIZE_MODEL` (default: `x-ai/grok-4.20-multi-agent-beta`)
+- `LAZY_READER_SUMMARIZE_MODEL` (default: `openai/gpt-5.4-mini`)
 - `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `2200`)
 - `LAZY_READER_SUMMARIZE_TEMPERATURE` (default: `0.15`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required)
@@ -429,6 +431,60 @@ LAZY_READER_ASK_CMD='printf "It produces ATP via cellular respiration."' lazy-re
 
 After running `lazy-reader ask`, type your question into the Zenity prompt so the command can answer it in context.
 
+### Teach mode (selected book page → ELI5 explanation → speech)
+
+Teach mode is for programming book pages. Select a page of text, press `Super+P`, and hear it explained in plain language: what the concept is, why it matters, how it works simply, and the key takeaway. It uses an ELI5 (explain like I'm new) approach with analogies where helpful — distinct from explain (for short snippets), summarize (compression), and narrate (faithful rendering).
+
+Teach mode is disabled until you configure a teach command.
+
+```nix
+services.lazy-reader = {
+  enable = true;
+  enableTeachInGnome = true;
+  gnomeTeachShortcut = "<Super>p";  # default
+  teachInputMaxChars = 5000;
+  teachCommand = ''
+    # Your command that reads a book page on stdin
+    # and prints a plain ELI5 explanation to stdout
+  '';
+};
+```
+
+With the bundled OpenRouter helper:
+
+```nix
+services.lazy-reader = {
+  enable = true;
+  enableTeachInGnome = true;
+  gnomeTeachShortcut = "<Super>p";  # default
+  teachMaxChars = 3000;
+  teachInputMaxChars = 5000;
+  teachCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/teach-openrouter.sh;
+};
+```
+
+Optional runtime tuning vars for the OpenRouter teach script:
+
+- `LAZY_READER_TEACH_MODEL` — override the model (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_TEACH_MAX_TOKENS` — override max tokens (default: `1800`)
+- `LAZY_READER_TEACH_TEMPERATURE` — override temperature (default: `0.2`)
+
+Default teach hotkey in GNOME is `services.lazy-reader.gnomeTeachShortcut = "<Super>p"`. The module automatically clears the GNOME `Super+P` display-switch binding when `clearDefaultSuperPInGnome = true` (the default) and the shortcut is `<Super>p`.
+
+**Command contract summary:**
+
+| Channel | Content |
+|---------|---------|
+| stdin | Selected book text (trimmed to `teachInputMaxChars`) |
+| stdout | ELI5 explanation (trimmed to `teachMaxChars`, then spoken) |
+
+Quick manual test:
+
+```bash
+wl-copy --primary "A closure is a function that captures variables from its surrounding scope..."
+LAZY_READER_TEACH_CMD='printf "Think of a closure like a backpack."' lazy-reader teach
+```
+
 ## Verify GNOME keybinding state
 
 Check whether GNOME still owns `Super+S`:
@@ -469,6 +525,10 @@ gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/or
 # Ask binding (when enableAskInGnome = true)
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-ask/ binding
 gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-ask/ command
+
+# Teach binding (when enableTeachInGnome = true)
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-teach/ binding
+gsettings get org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-teach/ command
 ```
 
 Inspect user service logs:
@@ -484,7 +544,7 @@ Re-apply binding immediately (without logout):
 systemctl --user restart lazy-reader-bind-gnome.service
 ```
 
-If you changed shell env vars or narrate/explain/summarize/solver/ask command behavior, run that restart command so GNOME re-reads the command binding.
+If you changed shell env vars or narrate/explain/summarize/solver/ask/teach command behavior, run that restart command so GNOME re-reads the command binding.
 
 ## Troubleshooting
 
@@ -526,7 +586,7 @@ bash tests/run.sh
 This is the primary repository validation command. It runs two suites:
 
 1. **Syntax checks** (`tests/syntax.sh`) — `bash -n` on every shell script and `nix-instantiate --parse` on every Nix file.
-2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_narrator`, `run_explainer`, `run_summarizer`, `run_problem_solver`, `run_asker`, the bundled `narrate-openrouter.sh` helper contract, and the main dispatch logic.
+2. **Bats unit/integration tests** (`tests/bats/`) — covers `trim_text`, `read_selection`, `is_running`, `cleanup_stale_pid_file`, `validate_config`, `run_narrator`, `run_explainer`, `run_summarizer`, `run_problem_solver`, `run_asker`, `run_teacher`, the bundled `narrate-openrouter.sh` helper contract, and the main dispatch logic.
 
 `bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
 

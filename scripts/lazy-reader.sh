@@ -27,6 +27,8 @@ source "${_DIR}/lib/summarizer.sh"
 source "${_DIR}/lib/solver.sh"
 # shellcheck source=scripts/lib/asker.sh
 source "${_DIR}/lib/asker.sh"
+# shellcheck source=scripts/lib/teacher.sh
+source "${_DIR}/lib/teacher.sh"
 
 start_reading() {
   validate_config
@@ -179,6 +181,25 @@ ask_selection() {
   speak_generated_text "$answered_text" "Reading answer..."
 }
 
+teach_selection() {
+  validate_config
+
+  local text
+  text="$(read_selection)"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "No selected text found. Highlight a passage and press your teach shortcut."
+    exit 1
+  fi
+
+  text="$(trim_text "$text" "$TEACH_INPUT_MAX_CHARS")"
+
+  local taught_text
+  taught_text="$(run_teacher "$text")"
+
+  speak_generated_text "$taught_text" "Reading explanation..."
+}
+
 main() {
   mkdir -p "$RUNTIME_DIR"
   cleanup_stale_pid_file
@@ -238,8 +259,14 @@ main() {
         exit 0
       fi
       ;;
+    teach)
+      if is_running; then
+        stop_running_reader
+        exit 0
+      fi
+      ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask]"
+      notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
       exit 1
       ;;
   esac
@@ -258,6 +285,8 @@ main() {
     solve_selection
   elif [[ "${1:-toggle}" == "ask" ]]; then
     ask_selection
+  elif [[ "${1:-toggle}" == "teach" ]]; then
+    teach_selection
   else
     start_reading
   fi
