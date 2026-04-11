@@ -3,7 +3,7 @@
 # OpenRouter problem-solver command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a concise, practical answer to stdout.
 input="$(cat)"
-model="x-ai/grok-4.1-fast"
+model="${LAZY_READER_PROBLEM_SOLVER_MODEL:-x-ai/grok-4.1-fast}"
 max_tokens="1600"
 temperature="0.12"
 

@@ -3,7 +3,7 @@
 # OpenRouter explain command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints concise explanation to stdout.
 input="$(cat)"
-model="x-ai/grok-4.1-fast"
+model="${LAZY_READER_EXPLAIN_MODEL:-x-ai/grok-4.1-fast}"
 max_tokens="1200"
 temperature="0.1"
 

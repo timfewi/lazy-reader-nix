@@ -3,7 +3,7 @@
 # OpenRouter summarize command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a concise spoken summary to stdout.
 input="$(cat)"
-model="${LAZY_READER_SUMMARIZE_MODEL:-x-ai/grok-4.20-multi-agent-beta}"
+model="${LAZY_READER_SUMMARIZE_MODEL:-openai/gpt-5.4-mini}"
 max_tokens="${LAZY_READER_SUMMARIZE_MAX_TOKENS:-2200}"
 temperature="${LAZY_READER_SUMMARIZE_TEMPERATURE:-0.15}"
 

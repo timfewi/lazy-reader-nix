@@ -4,7 +4,7 @@
 # Reads selected text from stdin and LAZY_READER_ASK_QUESTION from the environment,
 # then prints a concise spoken-language answer to stdout.
 input="$(cat)"
-model="x-ai/grok-4.1-fast"
+model="${LAZY_READER_ASK_MODEL:-x-ai/grok-4.1-fast}"
 max_tokens="1200"
 temperature="0.2"
 
