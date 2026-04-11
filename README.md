@@ -571,6 +571,7 @@ If you changed shell env vars or narrate/explain/summarize/solver/ask/teach comm
   systemctl --user restart lazy-reader-bind-gnome.service
   ```
 - Missing notifications: ensure notification daemon is running in desktop session.
+- Notifications are transient and Lazy Reader replaces the previous popup, so mode messages auto-dismiss after about 1 second.
 - No audio: switch player:
   ```nix
   services.lazy-reader.audioPlayer = "ffplay";

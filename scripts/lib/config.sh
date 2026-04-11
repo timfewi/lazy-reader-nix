@@ -52,6 +52,7 @@ readonly NOTIFY_TITLE="Lazy Reader"
 readonly RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 readonly PID_FILE="${RUNTIME_DIR}/lazy-reader.pid"
 
+NOTIFY_ID=""
 PLAYER_PID=""
 RESPONSE_FILE=""
 MODEL_DIR=""
