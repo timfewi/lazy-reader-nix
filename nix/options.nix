@@ -101,6 +101,17 @@
     description = "Maximum characters per Piper chunk for AI-generated outputs such as narrate, explain, summarize, solve, and ask.";
   };
 
+  openRouterApiKeyFile = lib.mkOption {
+    type = lib.types.nullOr lib.types.str;
+    default = null;
+    example = "/run/agenix/lazy-reader-openrouter-api-key";
+    description = ''
+      Runtime path to a file containing the OpenRouter API key. When set, the
+      lazy-reader wrapper reads `LAZY_READER_OPENROUTER_API_KEY` from this file
+      at runtime if it is not already present in the environment.
+    '';
+  };
+
   narrateCommand = lib.mkOption {
     type = lib.types.str;
     default = "";
@@ -146,7 +157,7 @@
   explainMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
     default = 2400;
-     description = "Maximum characters of explainCommand output passed to TTS.";
+    description = "Maximum characters of explainCommand output passed to TTS.";
   };
 
   enableExplainInGnome = lib.mkOption {

@@ -34,6 +34,7 @@ Import the module in your NixOS config:
   services.lazy-reader = {
     enable = true;
     gnomeShortcut = "<Super>s";
+    openRouterApiKeyFile = "/run/agenix/lazy-reader-openrouter-api-key";
     # clearDefaultSuperSInGnome = true;
     speed = 1.20;
     # playbackSpeed = 1.0;
@@ -223,7 +224,7 @@ Optional runtime tuning vars for the bundled narrate script:
 - `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS` (default: `1400`)
 - `LAZY_READER_NARRATE_INPUT_MAX_CHARS` (default: `4800`)
-- `LAZY_READER_OPENROUTER_API_KEY` (required)
+- `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>e"`. No extra GNOME conflict-clearing option is needed for that default. Older configs may still mention `clearDefaultSuperNInGnome`; it is now a deprecated no-op for backward compatibility.
 
@@ -261,7 +262,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the OpenRouter script:
 
-- `LAZY_READER_OPENROUTER_API_KEY` (required)
+- `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 Current defaults in `scripts/explain-openrouter.sh` are fixed to:
 
@@ -313,7 +314,7 @@ Optional runtime tuning vars for the bundled summarize script:
 - `LAZY_READER_SUMMARIZE_MODEL` (default: `openai/gpt-5.4-mini`)
 - `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `3200`)
 - `LAZY_READER_SUMMARIZE_TEMPERATURE` (default: `0.12`)
-- `LAZY_READER_OPENROUTER_API_KEY` (required)
+- `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 By default, summarize mode accepts up to `services.lazy-reader.summarizeInputMaxChars = 6000` selected characters before backend processing, which is intentionally larger than the typical explain flow. The spoken summary is still capped separately by `services.lazy-reader.summarizeMaxChars`, which defaults to `3200`.
 
@@ -354,7 +355,7 @@ Optional runtime tuning vars for the OpenRouter solver script:
 - `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `x-ai/grok-4.1-fast`)
 - `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `1600`)
 - `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.12`)
-- `LAZY_READER_OPENROUTER_API_KEY` (required)
+- `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 Default solver hotkey in GNOME is `services.lazy-reader.gnomeProblemSolverShortcut = "<Super>q"`.
 When using `Super+Q`, the module can remove GNOME's default close-window conflict automatically via `clearDefaultSuperQInGnome = true`.
@@ -397,7 +398,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the OpenRouter ask script:
 
-- `LAZY_READER_OPENROUTER_API_KEY` (required)
+- `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 Current defaults in `scripts/ask-openrouter.sh` are fixed to:
 

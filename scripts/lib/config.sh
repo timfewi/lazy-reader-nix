@@ -21,6 +21,12 @@ normalize_speed_alias() {
   esac
 }
 
+openrouter_api_key_file="${LAZY_READER_OPENROUTER_API_KEY_FILE:-}"
+if [[ -z "${LAZY_READER_OPENROUTER_API_KEY:-}" ]] && [[ -n "$openrouter_api_key_file" ]] && [[ -r "$openrouter_api_key_file" ]]; then
+  export LAZY_READER_OPENROUTER_API_KEY="$(< "$openrouter_api_key_file")"
+fi
+readonly OPENROUTER_API_KEY_FILE="$openrouter_api_key_file"
+
 readonly MODEL="${LAZY_READER_MODEL:-/var/lib/piper/en_US-lessac-medium.onnx}"
 readonly MODEL_CONFIG="${LAZY_READER_MODEL_CONFIG:-}"
 readonly PIPER_DATA_DIR="${LAZY_READER_PIPER_DATA_DIR:-}"

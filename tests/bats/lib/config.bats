@@ -67,6 +67,30 @@ run_config_dump() {
     "
 }
 
+run_openrouter_key_dump() {
+  run env -i \
+    "PATH=${PATH}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    LAZY_READER_SPEED=1.4 \
+    LAZY_READER_PLAYBACK_SPEED=1.0 \
+    LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=100 \
+    LAZY_READER_SPEAKER=0 \
+    LAZY_READER_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_INPUT_MAX_CHARS=100 \
+    LAZY_READER_NARRATE_MAX_CHARS=100 \
+    LAZY_READER_EXPLAIN_MAX_CHARS=100 \
+    LAZY_READER_SUMMARIZE_MAX_CHARS=100 \
+    LAZY_READER_SUMMARIZE_INPUT_MAX_CHARS=100 \
+    LAZY_READER_PROBLEM_SOLVER_MAX_CHARS=100 \
+    LAZY_READER_ASK_MAX_CHARS=100 \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "$@" \
+    bash -c "
+      source '${SCRIPTS_DIR}/lib/config.sh'
+      printf 'OPENROUTER_API_KEY=%s\n' \"\$LAZY_READER_OPENROUTER_API_KEY\"
+    "
+}
+
 # ---------------------------------------------------------------------------
 # Happy path
 # ---------------------------------------------------------------------------
@@ -115,6 +139,15 @@ run_config_dump() {
   run_config_dump LAZY_READER_SPEED= LAZY_READER_PLAYBACK_SPEED=1.2
   [ "$status" -eq 0 ]
   [ "$output" = $'SPEED=1.2\nPLAYBACK_SPEED=1.2' ]
+}
+
+@test "config: loads OpenRouter API key from runtime file when env var is unset" {
+  local key_file="${TEST_TMPDIR}/openrouter.key"
+  printf '%s' 'test-openrouter-key' > "$key_file"
+
+  run_openrouter_key_dump LAZY_READER_OPENROUTER_API_KEY_FILE="$key_file"
+  [ "$status" -eq 0 ]
+  [ "$output" = 'OPENROUTER_API_KEY=test-openrouter-key' ]
 }
 
 @test "validate_config: accepts SPEED alias 'normal'" {
