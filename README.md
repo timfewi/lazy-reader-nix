@@ -1,12 +1,12 @@
 # lazy-reader-nix
 
-Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, ask, and teach modes.
+Reads text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, ask, and teach modes.
 
 ## What this repo provides
 
 - `lazy-reader.nix`: NixOS module (`services.lazy-reader`)
 - `scripts/lazy-reader.sh`: runtime script that:
-  - gets selected text from Wayland selection (`wl-paste --primary`) with clipboard fallback,
+  - resolves input from an explicit provider hook, piped stdin, Wayland primary selection, clipboard, or `--text`,
   - synthesizes speech locally with `piper`,
   - plays returned audio via `mpv` or `ffplay`.
 - GNOME binding automation via user systemd service.
@@ -49,6 +49,8 @@ Import the module in your NixOS config:
     # modelConfigSha256 = "sha256-...";
     # speaker = 0;
     # audioPlayer = "mpv";
+    # inputSource = "auto"; # provider -> stdin -> primary -> clipboard
+    # inputProviderCommand = "";
     enableNarrateInGnome = true;
     gnomeNarrateShortcut = "<Super>e";
     narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
@@ -113,18 +115,29 @@ When both path- and URL-based options are set, URL-based options take precedence
 
 ## Behavior
 
-1. Highlight text with mouse in any window.
-2. Press `Super+S` to start reading. Longer plain-reader selections are spoken in sentence/paragraph-aware Piper chunks instead of being hard-cut at one raw character limit. If the selection contains code-like blocks and you have `explainCommand` or `narrateCommand` configured, those parts are spoken in natural language instead of being read symbol-by-symbol.
-3. Press `Super+S` again while reading to stop immediately.
-4. (Optional) Press `Super+E` (when `enableNarrateInGnome = true`) to rewrite selected docs/code/config into natural spoken language and read that narration aloud.
-5. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter selected snippet and read the clarification aloud.
-6. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
-7. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
-8. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-9. (Optional) Press `Super+P` (when `enableTeachInGnome = true`) to get a plain-language ELI5 explanation of a selected book page and hear it aloud.
-10. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, `Super+Shift+A`, or `Super+P`) to stop/cancel immediately.
+1. Provide input by one of these methods:
+   - highlight text in a Wayland app,
+   - copy text to the clipboard,
+   - pipe text in with stdin,
+   - pass text explicitly with `--text`,
+   - or configure `services.lazy-reader.inputProviderCommand`.
+2. Press `Super+S` to start reading, or run `lazy-reader`. Input resolution currently defaults to:
+   1. provider hook,
+   2. stdin,
+   3. Wayland primary selection,
+   4. clipboard.
+3. Longer plain-reader input is spoken in sentence/paragraph-aware Piper chunks instead of being hard-cut at one raw character limit. If the input contains code-like blocks and you have `explainCommand` or `narrateCommand` configured, those parts are spoken in natural language instead of being read symbol-by-symbol.
+4. You can override the input source per invocation with `--source provider|stdin|primary|clipboard|argument`.
+5. Press `Super+S` again while reading to stop immediately.
+6. (Optional) Press `Super+E` (when `enableNarrateInGnome = true`) to rewrite docs/code/config into natural spoken language and read that narration aloud.
+7. (Optional) Press `Super+A` (when `enableExplainInGnome = true`) to explain a shorter snippet and read the clarification aloud.
+8. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer passage into a spoken summary.
+9. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
+10. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the current input and hear the answer.
+11. (Optional) Press `Super+P` (when `enableTeachInGnome = true`) to get a plain-language ELI5 explanation of a book page and hear it aloud.
+12. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, `Super+Shift+A`, or `Super+P`) to stop/cancel immediately.
 
-If no text is selected, it shows a notification.
+If no usable input is available, it shows a notification.
 
 ## Quick test (without hotkey)
 
@@ -134,6 +147,27 @@ Run this first to verify local synthesis + audio work:
 wl-copy --primary "Hello, this is a lazy reader test."
 lazy-reader
 ```
+
+You can also test the new non-selection input paths directly:
+
+```bash
+printf "Hello from stdin." | lazy-reader
+lazy-reader --text "Hello from direct CLI text."
+lazy-reader start --text "Read this exact snippet."
+```
+
+Example provider hook for terminal-driven workflows:
+
+```nix
+services.lazy-reader = {
+  inputSource = "auto";
+  inputProviderCommand = ''
+    tmux capture-pane -p
+  '';
+};
+```
+
+When `inputProviderCommand` is set and `inputSource = "auto"`, it is tried before stdin, primary selection, and clipboard.
 
 Manual controls:
 
@@ -147,6 +181,15 @@ lazy-reader summarize
 lazy-reader solve
 lazy-reader ask
 lazy-reader teach
+```
+
+Common source overrides:
+
+```bash
+lazy-reader --source clipboard
+lazy-reader explain --source primary
+lazy-reader narrate --source stdin < snippet.txt
+lazy-reader solve --text "Why does this shell pipeline fail?"
 ```
 
 If this works, your script is fine and only keybinding setup remains.
@@ -578,6 +621,7 @@ If you changed shell env vars or narrate/explain/summarize/solver/ask/teach comm
   services.lazy-reader.audioPlayer = "ffplay";
   ```
 - Selection empty in some apps: select text then copy once, script will use clipboard fallback.
+- tmux / Copilot CLI / terminal text is not a GUI selection: pipe it in (`... | lazy-reader`), pass `--text`, or configure `inputProviderCommand`.
 
 ## Running the tests
 

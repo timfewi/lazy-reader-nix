@@ -101,6 +101,33 @@
     description = "Maximum characters per Piper chunk for AI-generated outputs such as narrate, explain, summarize, solve, and ask.";
   };
 
+  inputSource = lib.mkOption {
+    type = lib.types.enum [
+      "auto"
+      "provider"
+      "stdin"
+      "primary"
+      "clipboard"
+    ];
+    default = "auto";
+    description = ''
+      Default input source strategy. `auto` currently resolves in this order:
+      provider hook, then stdin, then Wayland primary selection, then clipboard.
+      Per-invocation overrides are still available via `lazy-reader --source ...`.
+    '';
+  };
+
+  inputProviderCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = ''
+      Optional shell command used as the highest-priority input provider when
+      `inputSource = "auto"` or `inputSource = "provider"`. This is useful for
+      tmux, Copilot CLI, or other process integrations that can print text to
+      stdout for lazy-reader to speak.
+    '';
+  };
+
   openRouterApiKeyFile = lib.mkOption {
     type = lib.types.nullOr lib.types.str;
     default = null;

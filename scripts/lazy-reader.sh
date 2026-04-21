@@ -9,6 +9,8 @@ _DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${_DIR}/lib/config.sh"
 # shellcheck source=scripts/lib/notify.sh
 source "${_DIR}/lib/notify.sh"
+# shellcheck source=scripts/lib/input.sh
+source "${_DIR}/lib/input.sh"
 # shellcheck source=scripts/lib/pid.sh
 source "${_DIR}/lib/pid.sh"
 # shellcheck source=scripts/lib/selection.sh
@@ -30,6 +32,67 @@ source "${_DIR}/lib/asker.sh"
 # shellcheck source=scripts/lib/teacher.sh
 source "${_DIR}/lib/teacher.sh"
 
+MODE="toggle"
+INPUT_TEXT_ARG=""
+INPUT_SOURCE_OVERRIDE=""
+
+usage_error() {
+  notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach] [--source auto|provider|stdin|primary|clipboard|argument] [--text 'text to read']"
+  exit 1
+}
+
+parse_args() {
+  local mode_seen="0"
+
+  MODE="toggle"
+  INPUT_TEXT_ARG=""
+  INPUT_SOURCE_OVERRIDE=""
+
+  while (( $# )); do
+    case "$1" in
+      toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach)
+        if [[ "$mode_seen" == "1" ]]; then
+          usage_error
+        fi
+        MODE="$1"
+        mode_seen="1"
+        shift
+        ;;
+      --text)
+        if (( $# < 2 )) || [[ -n "$INPUT_TEXT_ARG" ]]; then
+          usage_error
+        fi
+        INPUT_TEXT_ARG="$2"
+        shift 2
+        ;;
+      --source)
+        if (( $# < 2 )) || [[ -n "$INPUT_SOURCE_OVERRIDE" ]]; then
+          usage_error
+        fi
+        INPUT_SOURCE_OVERRIDE="$2"
+        shift 2
+        ;;
+      *)
+        usage_error
+        ;;
+    esac
+  done
+}
+
+read_mode_input_or_exit() {
+  local empty_message="$1"
+  local text
+
+  text="$(resolve_input_text "$INPUT_TEXT_ARG" "$INPUT_SOURCE_OVERRIDE")"
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "$empty_message"
+    exit 1
+  fi
+
+  printf '%s' "$text"
+}
+
 start_reading() {
   validate_config
 
@@ -37,12 +100,7 @@ start_reading() {
   local section_index=0
   local section_kind
   local section_text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight text and press Super+S."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight text, copy text, pipe text in, or pass --text.")"
 
   while IFS= read -r -d '' section_kind && IFS= read -r -d '' section_text; do
     if (( section_index == 0 )); then
@@ -105,12 +163,7 @@ narrate_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your narrate shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before narrate.")"
 
   text="$(trim_text "$text" "$NARRATE_INPUT_MAX_CHARS")"
 
@@ -124,12 +177,7 @@ explain_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your explain shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before explain.")"
 
   text="$(trim_text "$text" "$MAX_CHARS")"
 
@@ -143,12 +191,7 @@ summarize_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your summarize shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before summarize.")"
 
   text="$(trim_text "$text" "$SUMMARIZE_INPUT_MAX_CHARS")"
 
@@ -162,12 +205,7 @@ solve_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your solve shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before solve.")"
 
   text="$(trim_text "$text" "$MAX_CHARS")"
 
@@ -181,12 +219,7 @@ ask_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your ask shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before ask.")"
 
   text="$(trim_text "$text" "$MAX_CHARS")"
 
@@ -217,12 +250,7 @@ teach_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your teach shortcut."
-    exit 1
-  fi
+  text="$(read_mode_input_or_exit "No input text found. Highlight, copy, pipe, or pass --text before teach.")"
 
   text="$(trim_text "$text" "$TEACH_INPUT_MAX_CHARS")"
 
@@ -233,10 +261,11 @@ teach_selection() {
 }
 
 main() {
+  parse_args "$@"
   mkdir -p "$RUNTIME_DIR"
   cleanup_stale_pid_file
 
-  case "${1:-toggle}" in
+  case "$MODE" in
     stop)
       stop_running_reader
       exit 0
@@ -297,27 +326,23 @@ main() {
         exit 0
       fi
       ;;
-    *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
-      exit 1
-      ;;
   esac
 
   echo "$$" > "$PID_FILE"
   OWNS_PID_FILE="1"
   trap cleanup EXIT INT TERM
 
-  if [[ "${1:-toggle}" == "narrate" ]]; then
+  if [[ "$MODE" == "narrate" ]]; then
     narrate_selection
-  elif [[ "${1:-toggle}" == "explain" ]]; then
+  elif [[ "$MODE" == "explain" ]]; then
     explain_selection
-  elif [[ "${1:-toggle}" == "summarize" ]]; then
+  elif [[ "$MODE" == "summarize" ]]; then
     summarize_selection
-  elif [[ "${1:-toggle}" == "solve" ]]; then
+  elif [[ "$MODE" == "solve" ]]; then
     solve_selection
-  elif [[ "${1:-toggle}" == "ask" ]]; then
+  elif [[ "$MODE" == "ask" ]]; then
     ask_selection
-  elif [[ "${1:-toggle}" == "teach" ]]; then
+  elif [[ "$MODE" == "teach" ]]; then
     teach_selection
   else
     start_reading
