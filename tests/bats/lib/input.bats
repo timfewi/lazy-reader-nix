@@ -13,7 +13,7 @@ teardown() {
   teardown_tmpdir
 }
 
-@test "resolve_input_text: auto prefers provider over stdin and GUI sources" {
+@test "resolve_input_text: auto prefers stdin over provider and GUI sources" {
   make_stub "wl-paste" 'printf "selected text"'
 
   run bash -c "
@@ -25,7 +25,7 @@ teardown() {
   " <<< "stdin text"
 
   [ "$status" -eq 0 ]
-  [ "$output" = "provider text" ]
+  [ "$output" = "stdin text" ]
 }
 
 @test "resolve_input_text: auto prefers stdin over primary selection and clipboard" {
@@ -70,4 +70,45 @@ teardown() {
 
   [ "$status" -eq 0 ]
   [ "$output" = "argument text" ]
+}
+
+@test "resolve_input_text: auto falls through after provider failure without notifying" {
+  export LAZY_READER_TEST_NOTIFY_LOG="${TEST_TMPDIR}/notify.log"
+  make_stub "notify-send" '
+    printf "%s\n" "$*" >> "$LAZY_READER_TEST_NOTIFY_LOG"
+    printf "42"
+  '
+  make_stub "wl-paste" 'printf "selected text"'
+
+  run bash -c "
+    source '${SCRIPTS_DIR}/lib/notify.sh'
+    source '${SCRIPTS_DIR}/lib/input.sh'
+    INPUT_SOURCE=auto
+    INPUT_PROVIDER_CMD=false
+    resolve_input_text '' ''
+  "
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "selected text" ]
+  [ ! -e "${LAZY_READER_TEST_NOTIFY_LOG}" ]
+}
+
+@test "resolve_input_text: explicit provider failure stays actionable" {
+  export NOTIFY_TITLE="Lazy Reader"
+  export LAZY_READER_TEST_NOTIFY_LOG="${TEST_TMPDIR}/notify.log"
+  make_stub "notify-send" '
+    printf "%s\n" "$*" >> "$LAZY_READER_TEST_NOTIFY_LOG"
+    printf "42"
+  '
+
+  run bash -c "
+    source '${SCRIPTS_DIR}/lib/notify.sh'
+    source '${SCRIPTS_DIR}/lib/input.sh'
+    INPUT_PROVIDER_CMD=false
+    resolve_input_text '' provider
+  "
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Input provider command failed. Check LAZY_READER_INPUT_PROVIDER_CMD."* ]]
+  [ ! -e "${LAZY_READER_TEST_NOTIFY_LOG}" ]
 }

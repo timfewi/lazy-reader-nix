@@ -6,7 +6,7 @@ Reads text out loud with local Piper Text-to-Speech when you press `Super+S` (GN
 
 - `lazy-reader.nix`: NixOS module (`services.lazy-reader`)
 - `scripts/lazy-reader.sh`: runtime script that:
-  - resolves input from an explicit provider hook, piped stdin, Wayland primary selection, clipboard, or `--text`,
+  - resolves input from `--text`, piped stdin, an explicit provider hook, Wayland primary selection, or the clipboard,
   - synthesizes speech locally with `piper`,
   - plays returned audio via `mpv` or `ffplay`.
 - GNOME binding automation via user systemd service.
@@ -49,7 +49,7 @@ Import the module in your NixOS config:
     # modelConfigSha256 = "sha256-...";
     # speaker = 0;
     # audioPlayer = "mpv";
-    # inputSource = "auto"; # provider -> stdin -> primary -> clipboard
+    # inputSource = "auto"; # stdin -> provider -> primary -> clipboard
     # inputProviderCommand = "";
     enableNarrateInGnome = true;
     gnomeNarrateShortcut = "<Super>e";
@@ -122,8 +122,8 @@ When both path- and URL-based options are set, URL-based options take precedence
    - pass text explicitly with `--text`,
    - or configure `services.lazy-reader.inputProviderCommand`.
 2. Press `Super+S` to start reading, or run `lazy-reader`. Input resolution currently defaults to:
-   1. provider hook,
-   2. stdin,
+   1. stdin,
+   2. provider hook,
    3. Wayland primary selection,
    4. clipboard.
 3. Longer plain-reader input is spoken in sentence/paragraph-aware Piper chunks instead of being hard-cut at one raw character limit. If the input contains code-like blocks and you have `explainCommand` or `narrateCommand` configured, those parts are spoken in natural language instead of being read symbol-by-symbol.
@@ -167,7 +167,20 @@ services.lazy-reader = {
 };
 ```
 
-When `inputProviderCommand` is set and `inputSource = "auto"`, it is tried before stdin, primary selection, and clipboard.
+When `inputProviderCommand` is set and `inputSource = "auto"`, it is tried after stdin and before primary selection and clipboard. If the provider command fails, lazy-reader now treats that as a fallback miss instead of showing a desktop notification, so later sources can still be used quietly.
+
+If you want the **actual tmux mouse/copy-mode selection** instead of the whole pane, use the bundled helper:
+
+```nix
+services.lazy-reader = {
+  inputSource = "auto";
+  inputProviderCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/tmux-selection-provider.sh;
+};
+```
+
+That helper looks for the tmux pane with an active selection, copies the selected region into a temporary tmux buffer, prints it to stdout, and lets lazy-reader speak that text. This is the closest match for workflows like **Copilot CLI running inside tmux** where the text is visually selected in the terminal but is not a normal Wayland selection.
+
+For this to work, the selection must be a **tmux copy-mode selection** (for example created with mouse support or copy-mode keys), not just a terminal highlight that tmux never receives.
 
 Manual controls:
 

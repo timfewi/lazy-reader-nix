@@ -112,7 +112,7 @@
     default = "auto";
     description = ''
       Default input source strategy. `auto` currently resolves in this order:
-      provider hook, then stdin, then Wayland primary selection, then clipboard.
+      stdin, then provider hook, then Wayland primary selection, then clipboard.
       Per-invocation overrides are still available via `lazy-reader --source ...`.
     '';
   };

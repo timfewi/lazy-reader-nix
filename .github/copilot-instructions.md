@@ -37,14 +37,15 @@ lazy-reader status
 | `scripts/lib/config.sh`    | `readonly` env-var constants + mutable globals (`PLAYER_PID`, `RESPONSE_FILE`, `OWNS_PID_FILE`)                |
 | `scripts/lib/notify.sh`    | `notify()` — desktop notification + stderr                                                                     |
 | `scripts/lib/pid.sh`       | PID-file locking: `is_running`, `cleanup_stale_pid_file`, `kill_reader_tree`, `stop_running_reader`, `cleanup` |
-| `scripts/lib/selection.sh` | `read_selection` (wl-paste primary → clipboard fallback), `trim_text`                                          |
+| `scripts/lib/selection.sh` | `read_selection` (legacy wl-paste primary → clipboard fallback), `trim_text`                                   |
+| `scripts/lib/input.sh`     | Shared input ingestion (`provider` → `stdin` → `primary` → `clipboard`, plus `--text` override)               |
 | `scripts/lib/audio.sh`     | `play_audio` (file), `play_audio_stream` (stdin pipe) for mpv/ffplay                                           |
 | `scripts/lib/tts.sh`       | `validate_config`, `speak_text` (streaming first, temp-file fallback)                                          |
 | `scripts/lib/explainer.sh` | `run_explainer` — pipes selection through `LAZY_READER_EXPLAIN_CMD`                                            |
 | `scripts/lib/summarizer.sh` | `run_summarizer` — pipes selection through `LAZY_READER_SUMMARIZE_CMD`                                        |
 | `scripts/lib/solver.sh`     | `run_problem_solver` — pipes selection through `LAZY_READER_PROBLEM_SOLVER_CMD`                               |
 | `scripts/lib/asker.sh`      | `prompt_question`, `run_asker` — captures a typed follow-up via zenity, exposes `LAZY_READER_ASK_QUESTION`   |
-| `scripts/lazy-reader.sh`    | Sources libs; `start_reading`, `explain_selection`, `summarize_selection`, `solve_selection`, `ask_selection`, `main` |
+| `scripts/lazy-reader.sh`    | Sources libs; parses `--source`/`--text`; `start_reading`, `explain_selection`, `summarize_selection`, `solve_selection`, `ask_selection`, `main` |
 
 ### Nix (`lazy-reader.nix` + `nix/`)
 

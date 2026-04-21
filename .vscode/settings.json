@@ -1,0 +1,7 @@
+{
+  // This repo contains NixOS module files (default.nix, nix/*.nix) that are
+  // NOT development shells. Suppress the nix-env-selector auto-prompt so VS Code
+  // does not suggest activating a Nix environment on workspace open.
+  // The extension can still be invoked manually via the command palette.
+  "nixEnvSelector.suggestion": false
+}

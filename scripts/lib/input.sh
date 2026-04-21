@@ -5,6 +5,10 @@ input_is_blank() {
   [[ -z "${text//[[:space:]]/}" ]]
 }
 
+provider_error() {
+  printf '%s\n' "$1" >&2
+}
+
 read_input_from_provider() {
   local provider_cmd="${INPUT_PROVIDER_CMD:-}"
   if [[ -z "$provider_cmd" ]]; then
@@ -13,8 +17,7 @@ read_input_from_provider() {
 
   local provided_text
   if ! provided_text="$(bash -lc "$provider_cmd" 2>/dev/null)"; then
-    notify "Input provider command failed. Check LAZY_READER_INPUT_PROVIDER_CMD."
-    exit 1
+    return 1
   fi
 
   printf '%s' "$provided_text"
@@ -79,18 +82,18 @@ resolve_input_text() {
 
   case "$requested_source" in
     auto)
-      text="$(read_input_from_provider || true)"
-      if ! input_is_blank "$text"; then
-        printf '%s' "$text"
-        return 0
-      fi
-
       if input_has_stdin; then
         text="$(read_input_from_stdin)"
         if ! input_is_blank "$text"; then
           printf '%s' "$text"
           return 0
         fi
+      fi
+
+      text="$(read_input_from_provider || true)"
+      if ! input_is_blank "$text"; then
+        printf '%s' "$text"
+        return 0
       fi
 
       text="$(read_input_from_primary_selection)"
@@ -104,7 +107,11 @@ resolve_input_text() {
       ;;
     provider)
       if ! text="$(read_input_from_provider)"; then
-        notify "No input provider configured. Set LAZY_READER_INPUT_PROVIDER_CMD or choose another source."
+        if [[ -n "${INPUT_PROVIDER_CMD:-}" ]]; then
+          provider_error "Input provider command failed. Check LAZY_READER_INPUT_PROVIDER_CMD."
+        else
+          provider_error "No input provider configured. Set LAZY_READER_INPUT_PROVIDER_CMD or choose another source."
+        fi
         exit 1
       fi
       printf '%s' "$text"

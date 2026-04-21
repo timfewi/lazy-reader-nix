@@ -180,7 +180,7 @@ run_lr() {
   [ "$output" = "stdin text" ]
 }
 
-@test "start: provider hook wins over piped stdin" {
+@test "start: prefers piped stdin over provider hook" {
   local speech_log="${TEST_TMPDIR}/provider.log"
 
   make_stub "wl-paste" 'printf "selected text"'
@@ -219,7 +219,7 @@ run_lr() {
 
   run cat "${speech_log}"
   [ "$status" -eq 0 ]
-  [ "$output" = "provider text" ]
+  [ "$output" = "stdin text" ]
 }
 
 @test "stop: cancels an active chunked read" {
@@ -354,6 +354,48 @@ run_lr() {
   run cat "${speech_log}"
   [ "$status" -eq 0 ]
   [ "$output" = "Explained: argument text" ]
+}
+
+@test "explain: prefers piped stdin over provider hook" {
+  local speech_log="${TEST_TMPDIR}/explain-stdin.log"
+
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s" "$input" > "$LAZY_READER_TEST_SPEECH_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run bash -c "
+    printf 'stdin text' |
+      env \
+        XDG_RUNTIME_DIR='${XDG_RUNTIME_DIR}' \
+        LAZY_READER_MODEL='${MODEL_FILE}' \
+        LAZY_READER_EXPLAIN_CMD=\"printf 'Explained: %s' \\\"\\\$(cat)\\\"\" \
+        LAZY_READER_INPUT_PROVIDER_CMD=\"printf '%s' 'provider text'\" \
+        LAZY_READER_TEST_SPEECH_LOG='${speech_log}' \
+        PATH='${PATH}' \
+        bash '${SCRIPTS_DIR}/lazy-reader.sh' explain
+  "
+
+  [ "$status" -eq 0 ]
+
+  run cat "${speech_log}"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Explained: stdin text" ]
 }
 
 @test "narrate: chunks long generated output before Piper synthesis" {
