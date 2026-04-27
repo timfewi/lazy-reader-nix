@@ -30,6 +30,97 @@ source "${_DIR}/lib/asker.sh"
 # shellcheck source=scripts/lib/teacher.sh
 source "${_DIR}/lib/teacher.sh"
 
+INPUT_SOURCE="selection"
+MODE="toggle"
+
+usage() {
+  printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
+}
+
+parse_args() {
+  local has_mode=0
+  local next_arg
+
+  while (($#)); do
+    case "$1" in
+      --stdin)
+        INPUT_SOURCE="stdin"
+        ;;
+      --input-source)
+        if (($# < 2)); then
+          printf '%s\n' "error: --input-source requires a value" >&2
+          return 1
+        fi
+        next_arg="$2"
+        INPUT_SOURCE="$next_arg"
+        shift
+        ;;
+      --input-source=*)
+        INPUT_SOURCE="${1#*=}"
+        ;;
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      stop|toggle|start|status|narrate|explain|summarize|solve|ask|teach)
+        if (( has_mode )); then
+          printf '%s\n' "error: multiple commands provided" >&2
+          return 1
+        fi
+        MODE="$1"
+        has_mode=1
+        ;;
+      *)
+        printf '%s\n' "error: unknown argument: $1" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  case "$INPUT_SOURCE" in
+    selection|stdin)
+      ;;
+    *)
+      printf '%s\n' "error: unsupported input source: $INPUT_SOURCE" >&2
+      return 1
+      ;;
+  esac
+}
+
+missing_input_message() {
+  local selection_message="$1"
+
+  if [[ "$INPUT_SOURCE" == "stdin" ]]; then
+    printf '%s\n' "No stdin text found. Pipe text to lazy-reader."
+    return 0
+  fi
+
+  printf '%s\n' "$selection_message"
+}
+
+require_input_text() {
+  local selection_message="$1"
+  local max_chars="${2:-}"
+  local text
+
+  if ! text="$(read_input_text "$INPUT_SOURCE")"; then
+    notify "$(missing_input_message "$selection_message")"
+    exit 1
+  fi
+
+  if [[ -z "${text//[[:space:]]/}" ]]; then
+    notify "$(missing_input_message "$selection_message")"
+    exit 1
+  fi
+
+  if [[ -n "$max_chars" ]]; then
+    text="$(trim_text "$text" "$max_chars")"
+  fi
+
+  printf '%s' "$text"
+}
+
 start_reading() {
   validate_config
 
@@ -37,12 +128,7 @@ start_reading() {
   local section_index=0
   local section_kind
   local section_text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight text and press Super+S."
-    exit 1
-  fi
+  text="$(require_input_text "No selected text found. Highlight text and press Super+S.")"
 
   while IFS= read -r -d '' section_kind && IFS= read -r -d '' section_text; do
     if (( section_index == 0 )); then
@@ -105,14 +191,7 @@ narrate_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your narrate shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$NARRATE_INPUT_MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a passage and press your narrate shortcut." "$NARRATE_INPUT_MAX_CHARS")"
 
   local narrated_text
   narrated_text="$(run_narrator "$text")"
@@ -124,14 +203,7 @@ explain_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your explain shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a snippet and press your explain shortcut." "$MAX_CHARS")"
 
   local explained_text
   explained_text="$(run_explainer "$text")"
@@ -143,14 +215,7 @@ summarize_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your summarize shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$SUMMARIZE_INPUT_MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a passage and press your summarize shortcut." "$SUMMARIZE_INPUT_MAX_CHARS")"
 
   local summarized_text
   summarized_text="$(run_summarizer "$text")"
@@ -162,14 +227,7 @@ solve_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your solve shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a snippet and press your solve shortcut." "$MAX_CHARS")"
 
   local solved_text
   solved_text="$(run_problem_solver "$text")"
@@ -181,14 +239,7 @@ ask_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a snippet and press your ask shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a snippet and press your ask shortcut." "$MAX_CHARS")"
 
   local answered_text
   local answer_file
@@ -217,14 +268,7 @@ teach_selection() {
   validate_config
 
   local text
-  text="$(read_selection)"
-
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "No selected text found. Highlight a passage and press your teach shortcut."
-    exit 1
-  fi
-
-  text="$(trim_text "$text" "$TEACH_INPUT_MAX_CHARS")"
+  text="$(require_input_text "No selected text found. Highlight a passage and press your teach shortcut." "$TEACH_INPUT_MAX_CHARS")"
 
   local taught_text
   taught_text="$(run_teacher "$text")"
@@ -236,7 +280,12 @@ main() {
   mkdir -p "$RUNTIME_DIR"
   cleanup_stale_pid_file
 
-  case "${1:-toggle}" in
+  if ! parse_args "$@"; then
+    notify "$(usage)"
+    exit 1
+  fi
+
+  case "$MODE" in
     stop)
       stop_running_reader
       exit 0
@@ -298,7 +347,7 @@ main() {
       fi
       ;;
     *)
-      notify "Usage: lazy-reader [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
+      notify "$(usage)"
       exit 1
       ;;
   esac
@@ -307,17 +356,17 @@ main() {
   OWNS_PID_FILE="1"
   trap cleanup EXIT INT TERM
 
-  if [[ "${1:-toggle}" == "narrate" ]]; then
+  if [[ "$MODE" == "narrate" ]]; then
     narrate_selection
-  elif [[ "${1:-toggle}" == "explain" ]]; then
+  elif [[ "$MODE" == "explain" ]]; then
     explain_selection
-  elif [[ "${1:-toggle}" == "summarize" ]]; then
+  elif [[ "$MODE" == "summarize" ]]; then
     summarize_selection
-  elif [[ "${1:-toggle}" == "solve" ]]; then
+  elif [[ "$MODE" == "solve" ]]; then
     solve_selection
-  elif [[ "${1:-toggle}" == "ask" ]]; then
+  elif [[ "$MODE" == "ask" ]]; then
     ask_selection
-  elif [[ "${1:-toggle}" == "teach" ]]; then
+  elif [[ "$MODE" == "teach" ]]; then
     teach_selection
   else
     start_reading

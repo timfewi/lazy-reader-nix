@@ -13,6 +13,30 @@ read_selection() {
   printf '%s' "$selected"
 }
 
+read_stdin_text() {
+  if [[ -t 0 ]]; then
+    return 1
+  fi
+
+  cat
+}
+
+read_input_text() {
+  local input_source="${1:-selection}"
+
+  case "$input_source" in
+    selection)
+      read_selection
+      ;;
+    stdin)
+      read_stdin_text
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 trim_leading_whitespace() {
   local text="$1"
 

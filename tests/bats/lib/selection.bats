@@ -131,7 +131,7 @@ collect_reading_sections() {
 }
 
 # ---------------------------------------------------------------------------
-# read_selection — stubbed wl-paste
+# read_selection / read_input_text
 # ---------------------------------------------------------------------------
 
 @test "read_selection: returns primary selection when non-empty" {
@@ -151,4 +151,15 @@ collect_reading_sections() {
 @test "read_selection: returns empty string when wl-paste returns nothing" {
   make_stub "wl-paste" 'printf ""'
   [ "$(read_selection)" = "" ]
+}
+
+@test "read_stdin_text: returns piped stdin content" {
+  run bash -c "source '${SCRIPTS_DIR}/lib/selection.sh'; read_stdin_text" <<< "stdin text"
+  [ "$status" -eq 0 ]
+  [ "$output" = "stdin text" ]
+}
+
+@test "read_input_text: rejects unsupported input source" {
+  run bash -c "source '${SCRIPTS_DIR}/lib/selection.sh'; read_input_text invalid-source"
+  [ "$status" -ne 0 ]
 }

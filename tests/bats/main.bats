@@ -139,6 +139,43 @@ run_lr() {
   [ "$output" = "First sentence." ]
 }
 
+@test "start: reads piped stdin when --stdin is provided" {
+  local chunk_log="${TEST_TMPDIR}/stdin-chunks.log"
+
+  make_stub "wl-paste" 'printf ""'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s\n--chunk--\n" "$input" >> "$LAZY_READER_TEST_CHUNK_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_TEST_CHUNK_LOG=${chunk_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" --stdin start <<< "stdin driven text"
+
+  [ "$status" -eq 0 ]
+  run bash -c "head -n 1 '${chunk_log}'"
+  [ "$status" -eq 0 ]
+  [ "$output" = "stdin driven text" ]
+}
+
 @test "stop: cancels an active chunked read" {
   local chunk_log="${TEST_TMPDIR}/chunks-stop.log"
 
@@ -303,6 +340,44 @@ run_lr() {
   ! kill -0 "$HELPER_PID" 2>/dev/null
 }
 
+@test "explain: reads piped stdin when option appears after mode" {
+  local speech_log="${TEST_TMPDIR}/explain-stdin.log"
+
+  make_stub "wl-paste" 'printf ""'
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s" "$input" > "$LAZY_READER_TEST_SPEECH_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_EXPLAIN_CMD=input=\"\$(cat)\"; printf \"Explained: %s\" \"\$input\"" \
+    "LAZY_READER_TEST_SPEECH_LOG=${speech_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" explain --stdin <<< "stdin snippet"
+
+  [ "$status" -eq 0 ]
+  run cat "${speech_log}"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Explained: stdin snippet" ]
+}
+
 # ---------------------------------------------------------------------------
 # summarize / solve / ask — already running
 # ---------------------------------------------------------------------------
@@ -343,5 +418,10 @@ run_lr() {
 
 @test "unknown command: exits non-zero" {
   run_lr notacommand
+  [ "$status" -ne 0 ]
+}
+
+@test "unsupported input source: exits non-zero" {
+  run_lr --input-source invalid start
   [ "$status" -ne 0 ]
 }
