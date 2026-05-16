@@ -305,4 +305,25 @@
     default = true;
     description = "Clear GNOME default Super+P binding (switch-monitor) to avoid shortcut conflict when gnomeTeachShortcut is <Super>p.";
   };
+
+  ttsProvider = lib.mkOption {
+    type = lib.types.enum [
+      "piper"
+      "openrouter"
+    ];
+    default = "piper";
+    description = "TTS provider to use.";
+  };
+
+  ttsModel = lib.mkOption {
+    type = lib.types.str;
+    default = "tts-1";
+    description = "TTS model to use (for openrouter).";
+  };
+
+  ttsVoice = lib.mkOption {
+    type = lib.types.str;
+    default = "alloy";
+    description = "TTS voice to use (for openrouter).";
+  };
 }

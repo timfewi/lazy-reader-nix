@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lazy-reader"
+CONFIG_FILE="$CONFIG_DIR/tts.conf"
+
+if [ "$#" -ne 3 ]; then
+  echo "Usage: lazy-reader-set-tts <provider> <model> <voice>"
+  exit 1
+fi
+
+provider="$1"
+model="$2"
+voice="$3"
+
+case "$provider" in
+  piper|openrouter)
+    ;;
+  *)
+    echo "Invalid TTS provider '$provider'. Use 'piper' or 'openrouter'." >&2
+    exit 1
+    ;;
+esac
+
+case "$model$voice" in
+  *$'\n'*)
+    echo "Model and voice must not contain newlines." >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p "$CONFIG_DIR"
+{
+  printf 'TTS_PROVIDER=%s\n' "$provider"
+  printf 'TTS_MODEL=%s\n' "$model"
+  printf 'TTS_VOICE=%s\n' "$voice"
+} > "$CONFIG_FILE"
+
+echo "Configuration saved to $CONFIG_FILE"

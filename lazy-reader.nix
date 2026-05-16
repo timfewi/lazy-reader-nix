@@ -7,6 +7,7 @@
 let
   cfg = config.services.lazy-reader;
   lazyReaderScript = import ./nix/script.nix { inherit cfg pkgs lib; };
+  lazyReaderSetTtsScript = import ./nix/set-tts-script.nix { inherit pkgs; };
   lazyReaderBindScript = import ./nix/bind-script.nix { inherit cfg pkgs lib; };
 in
 {
@@ -24,7 +25,10 @@ in
       }
     ];
 
-    environment.systemPackages = [ lazyReaderScript ];
+    environment.systemPackages = [
+      lazyReaderScript
+      lazyReaderSetTtsScript
+    ];
 
     systemd.user.services.lazy-reader-bind-gnome =
       import ./nix/service.nix { inherit lazyReaderBindScript lib cfg; };

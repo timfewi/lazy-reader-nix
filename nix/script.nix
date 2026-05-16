@@ -53,6 +53,9 @@ pkgs.writeShellApplication {
     export LAZY_READER_PLAYBACK_SPEED="''${LAZY_READER_PLAYBACK_SPEED:-${toString cfg.playbackSpeed}}"
     export LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS="''${LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS:-${toString cfg.generatedSpeechChunkMaxChars}}"
     export LAZY_READER_OPENROUTER_API_KEY_FILE="''${LAZY_READER_OPENROUTER_API_KEY_FILE:-${cfg.openRouterApiKeyFile or ""}}"
+    export LAZY_READER_TTS_PROVIDER="${cfg.ttsProvider}"
+    export LAZY_READER_TTS_MODEL="${cfg.ttsModel}"
+    export LAZY_READER_TTS_VOICE="${cfg.ttsVoice}"
     export LAZY_READER_NARRATE_CMD=''${LAZY_READER_NARRATE_CMD:-${lib.escapeShellArg cfg.narrateCommand}}
     export LAZY_READER_NARRATE_INPUT_MAX_CHARS="''${LAZY_READER_NARRATE_INPUT_MAX_CHARS:-${toString cfg.narrateInputMaxChars}}"
     export LAZY_READER_NARRATE_MAX_CHARS="''${LAZY_READER_NARRATE_MAX_CHARS:-${toString cfg.narrateMaxChars}}"
