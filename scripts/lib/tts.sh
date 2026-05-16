@@ -18,6 +18,15 @@ validate_config() {
 		exit 1
 	fi
 
+	case "$OPENROUTER_RESPONSE_FORMAT" in
+		auto|mp3|pcm)
+			;;
+		*)
+			notify "Invalid OpenRouter response format '$OPENROUTER_RESPONSE_FORMAT'. Use auto, mp3, or pcm."
+			exit 1
+			;;
+	esac
+
 	if ! [[ "$GENERATED_SPEECH_CHUNK_MAX_CHARS" =~ ^[0-9]+$ ]] || ((GENERATED_SPEECH_CHUNK_MAX_CHARS <= 0)); then
 		notify "Invalid generated speech chunk max chars '$GENERATED_SPEECH_CHUNK_MAX_CHARS'. Use a positive integer."
 		exit 1
@@ -179,6 +188,26 @@ _speak_piper() {
 	fi
 }
 
+resolve_openrouter_response_format() {
+	local model="$1"
+
+	case "$OPENROUTER_RESPONSE_FORMAT" in
+		mp3|pcm)
+			printf '%s' "$OPENROUTER_RESPONSE_FORMAT"
+			;;
+		auto)
+			case "$model" in
+				google/gemini-*tts*)
+					printf 'pcm'
+					;;
+				*)
+					printf 'mp3'
+					;;
+			esac
+			;;
+	esac
+}
+
 _speak_openrouter() {
 	local text="$1"
 	local started_message="$2"
@@ -201,16 +230,19 @@ _speak_openrouter() {
 
 	local tts_model="${TTS_MODEL:-tts-1}"
 	local tts_voice="${TTS_VOICE:-alloy}"
+	local response_format
+	response_format="$(resolve_openrouter_response_format "$tts_model")"
 	local payload
 	payload="$(jq -n \
 		--arg model "$tts_model" \
 		--arg input "$text" \
 		--arg voice "$tts_voice" \
+		--arg response_format "$response_format" \
 		--arg speed "$OPENROUTER_SPEED" \
-		'{model: $model, input: $input, voice: $voice, response_format: "mp3"} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
+		'{model: $model, input: $input, voice: $voice, response_format: $response_format} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
 
 	local response_file
-	response_file="$(mktemp --suffix=".mp3")"
+	response_file="$(mktemp --suffix=".${response_format}")"
 	local curl_status=0
 	local http_status
 
@@ -234,7 +266,7 @@ _speak_openrouter() {
 		exit 1
 	fi
 
-	if ! play_audio "$response_file"; then
+	if ! play_audio "$response_file" "$response_format"; then
 		notify "Audio playback failed with player '$PLAYER'."
 		exit 1
 	fi

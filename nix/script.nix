@@ -52,6 +52,7 @@ pkgs.writeShellApplication {
     export LAZY_READER_SPEED="''${LAZY_READER_SPEED:-${toString cfg.speed}}"
     export LAZY_READER_PLAYBACK_SPEED="''${LAZY_READER_PLAYBACK_SPEED:-${toString cfg.playbackSpeed}}"
     export LAZY_READER_OPENROUTER_SPEED="''${LAZY_READER_OPENROUTER_SPEED:-${lib.optionalString (cfg.openRouterSpeed != null) (toString cfg.openRouterSpeed)}}"
+    export LAZY_READER_OPENROUTER_RESPONSE_FORMAT="''${LAZY_READER_OPENROUTER_RESPONSE_FORMAT:-${cfg.openRouterResponseFormat}}"
     export LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS="''${LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS:-${toString cfg.generatedSpeechChunkMaxChars}}"
     export LAZY_READER_OPENROUTER_API_KEY_FILE="''${LAZY_READER_OPENROUTER_API_KEY_FILE:-${cfg.openRouterApiKeyFile or ""}}"
     export LAZY_READER_TTS_PROVIDER="${cfg.ttsProvider}"

@@ -261,6 +261,22 @@ EOF
   [ "$status" -ne 0 ]
 }
 
+@test "validate_config: accepts OPENROUTER_RESPONSE_FORMAT values" {
+  run_validate LAZY_READER_OPENROUTER_RESPONSE_FORMAT=auto
+  [ "$status" -eq 0 ]
+
+  run_validate LAZY_READER_OPENROUTER_RESPONSE_FORMAT=mp3
+  [ "$status" -eq 0 ]
+
+  run_validate LAZY_READER_OPENROUTER_RESPONSE_FORMAT=pcm
+  [ "$status" -eq 0 ]
+}
+
+@test "validate_config: fails when OPENROUTER_RESPONSE_FORMAT is invalid" {
+  run_validate LAZY_READER_OPENROUTER_RESPONSE_FORMAT=wav
+  [ "$status" -ne 0 ]
+}
+
 @test "validate_config: fails when GENERATED_SPEECH_CHUNK_MAX_CHARS is zero" {
   run_validate LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=0
   [ "$status" -ne 0 ]

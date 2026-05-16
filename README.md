@@ -189,12 +189,20 @@ services.lazy-reader.openRouterSpeed = 1.3;
 OpenRouter documents this as model/provider-dependent. Unsupported providers may
 ignore it, so keep using `playbackSpeed` when you need guaranteed faster audio.
 
+OpenRouter response format defaults to `auto`, which uses PCM for Gemini TTS
+models and MP3 for other OpenRouter TTS models:
+
+```nix
+services.lazy-reader.openRouterResponseFormat = "auto";
+```
+
 You can also override at runtime (because the GNOME shortcut runs through `zsh -lc`):
 
 ```bash
 export LAZY_READER_SPEED=1.0
 export LAZY_READER_PLAYBACK_SPEED=1.0
 export LAZY_READER_OPENROUTER_SPEED=1.3
+export LAZY_READER_OPENROUTER_RESPONSE_FORMAT=auto
 export LAZY_READER_STREAM_PLAYBACK=1
 ```
 

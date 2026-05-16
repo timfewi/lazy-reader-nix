@@ -101,6 +101,16 @@
     description = "Optional OpenRouter TTS speed parameter. Only models/providers that support native TTS speed use this; others may ignore it.";
   };
 
+  openRouterResponseFormat = lib.mkOption {
+    type = lib.types.enum [
+      "auto"
+      "mp3"
+      "pcm"
+    ];
+    default = "auto";
+    description = "OpenRouter TTS response format. Auto uses PCM for Gemini TTS models and MP3 for other models.";
+  };
+
   generatedSpeechChunkMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
     default = 1400;

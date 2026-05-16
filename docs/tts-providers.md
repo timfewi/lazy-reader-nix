@@ -95,8 +95,14 @@ provider-dependent; unsupported models may ignore it. Use
 `services.lazy-reader.playbackSpeed` for guaranteed faster local playback of the
 returned audio.
 
-OpenRouter returns raw audio bytes. Lazy Reader saves MP3 and plays it through
-the configured audio player.
+`response_format` defaults to `auto`: Gemini TTS models use `pcm`, and other
+OpenRouter TTS models use `mp3`. You can override this with
+`services.lazy-reader.openRouterResponseFormat` or
+`LAZY_READER_OPENROUTER_RESPONSE_FORMAT`.
+
+OpenRouter returns raw audio bytes. Lazy Reader saves the response and plays it
+through the configured audio player. PCM playback assumes the Gemini TTS format:
+24 kHz, signed 16-bit little-endian, mono.
 
 ### OpenRouter model and voice presets
 
@@ -107,7 +113,7 @@ voice IDs can change independently of Lazy Reader.
 Recommended quick switches:
 
 ```bash
-lazy-reader-set-tts openrouter x-ai/grok-voice-tts-1.0 eve
+lazy-reader-set-tts openrouter x-ai/grok-voice-tts-1.0 rex
 lazy-reader-set-tts openrouter google/gemini-3.1-flash-tts-preview Zephyr
 lazy-reader-set-tts openrouter zyphra/zonos-v0.1-transformer american_female
 lazy-reader-set-tts openrouter zyphra/zonos-v0.1-hybrid american_female
@@ -219,6 +225,28 @@ jq -n \
   -o /tmp/openrouter-tts-test.mp3
 
 mpv /tmp/openrouter-tts-test.mp3
+```
+
+Gemini TTS requires PCM instead of MP3:
+
+```bash
+jq -n \
+  --arg model "google/gemini-3.1-flash-tts-preview" \
+  --arg input "Hello, this is a direct Gemini TTS test." \
+  --arg voice "Zephyr" \
+  '{model:$model,input:$input,voice:$voice,response_format:"pcm"}' \
+| curl --fail-with-body --show-error --location \
+  https://openrouter.ai/api/v1/audio/speech \
+  -H "Authorization: Bearer $api_key" \
+  -H "Content-Type: application/json" \
+  -d @- \
+  -o /tmp/openrouter-tts-test.pcm
+
+mpv --demuxer=rawaudio \
+  --demuxer-rawaudio-format=s16le \
+  --demuxer-rawaudio-rate=24000 \
+  --demuxer-rawaudio-channels=1 \
+  /tmp/openrouter-tts-test.pcm
 ```
 
 If this fails, the response body should explain the issue, usually one of:
