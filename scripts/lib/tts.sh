@@ -13,6 +13,11 @@ validate_config() {
 		exit 1
 	fi
 
+	if [[ -n "$OPENROUTER_SPEED" ]] && { ! [[ "$OPENROUTER_SPEED" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v speed="$OPENROUTER_SPEED" 'BEGIN { exit !(speed > 0) }'; }; then
+		notify "Invalid OpenRouter speed '$OPENROUTER_SPEED'. Use a positive number like 1.0, 1.3, or 1.4."
+		exit 1
+	fi
+
 	if ! [[ "$GENERATED_SPEECH_CHUNK_MAX_CHARS" =~ ^[0-9]+$ ]] || ((GENERATED_SPEECH_CHUNK_MAX_CHARS <= 0)); then
 		notify "Invalid generated speech chunk max chars '$GENERATED_SPEECH_CHUNK_MAX_CHARS'. Use a positive integer."
 		exit 1
@@ -201,7 +206,8 @@ _speak_openrouter() {
 		--arg model "$tts_model" \
 		--arg input "$text" \
 		--arg voice "$tts_voice" \
-		'{model: $model, input: $input, voice: $voice, response_format: "mp3"}')"
+		--arg speed "$OPENROUTER_SPEED" \
+		'{model: $model, input: $input, voice: $voice, response_format: "mp3"} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
 
 	local response_file
 	response_file="$(mktemp --suffix=".mp3")"

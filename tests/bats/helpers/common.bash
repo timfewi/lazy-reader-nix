@@ -9,6 +9,8 @@
 setup_tmpdir() {
   export TEST_TMPDIR
   TEST_TMPDIR="$(mktemp -d)"
+  export XDG_CONFIG_HOME="${TEST_TMPDIR}/config"
+  mkdir -p "$XDG_CONFIG_HOME"
   export XDG_RUNTIME_DIR="${TEST_TMPDIR}/runtime"
   mkdir -p "$XDG_RUNTIME_DIR"
   export STUB_DIR="${TEST_TMPDIR}/stubs"

@@ -95,6 +95,12 @@
     description = "Local audio playback speed multiplier (0.25 to 4.0). Set equal to speed to restore the previous combined-speed behavior.";
   };
 
+  openRouterSpeed = lib.mkOption {
+    type = lib.types.nullOr (lib.types.addCheck lib.types.float (value: value > 0));
+    default = null;
+    description = "Optional OpenRouter TTS speed parameter. Only models/providers that support native TTS speed use this; others may ignore it.";
+  };
+
   generatedSpeechChunkMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
     default = 1400;

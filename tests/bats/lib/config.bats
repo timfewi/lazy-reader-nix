@@ -241,6 +241,26 @@ EOF
   [ "$status" -ne 0 ]
 }
 
+@test "validate_config: accepts optional OPENROUTER_SPEED" {
+  run_validate LAZY_READER_OPENROUTER_SPEED=1.3
+  [ "$status" -eq 0 ]
+}
+
+@test "validate_config: accepts OPENROUTER_SPEED alias 'fast'" {
+  run_validate LAZY_READER_OPENROUTER_SPEED=fast
+  [ "$status" -eq 0 ]
+}
+
+@test "validate_config: fails when OPENROUTER_SPEED is non-numeric" {
+  run_validate LAZY_READER_OPENROUTER_SPEED=turbo
+  [ "$status" -ne 0 ]
+}
+
+@test "validate_config: fails when OPENROUTER_SPEED is zero" {
+  run_validate LAZY_READER_OPENROUTER_SPEED=0
+  [ "$status" -ne 0 ]
+}
+
 @test "validate_config: fails when GENERATED_SPEECH_CHUNK_MAX_CHARS is zero" {
   run_validate LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=0
   [ "$status" -ne 0 ]

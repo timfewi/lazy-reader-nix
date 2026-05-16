@@ -84,9 +84,16 @@ The request includes:
   "model": "x-ai/grok-voice-tts-1.0",
   "input": "Text to speak",
   "voice": "eve",
-  "response_format": "mp3"
+  "response_format": "mp3",
+  "speed": 1.3
 }
 ```
+
+The `speed` field is sent only when `services.lazy-reader.openRouterSpeed` or
+`LAZY_READER_OPENROUTER_SPEED` is set. OpenRouter documents native speed as
+provider-dependent; unsupported models may ignore it. Use
+`services.lazy-reader.playbackSpeed` for guaranteed faster local playback of the
+returned audio.
 
 OpenRouter returns raw audio bytes. Lazy Reader saves MP3 and plays it through
 the configured audio player.

@@ -175,13 +175,26 @@ Local playback speed is separate and defaults to natural-speed playback:
 services.lazy-reader.playbackSpeed = 1.0;
 ```
 
+For OpenRouter TTS, this is the reliable way to increase reading speed across
+all models because it speeds up the returned audio locally.
+
 You can set `playbackSpeed = config.services.lazy-reader.speed;` if you want the older combined-speed behavior back.
+
+OpenRouter also accepts a native TTS `speed` parameter for some providers:
+
+```nix
+services.lazy-reader.openRouterSpeed = 1.3;
+```
+
+OpenRouter documents this as model/provider-dependent. Unsupported providers may
+ignore it, so keep using `playbackSpeed` when you need guaranteed faster audio.
 
 You can also override at runtime (because the GNOME shortcut runs through `zsh -lc`):
 
 ```bash
 export LAZY_READER_SPEED=1.0
 export LAZY_READER_PLAYBACK_SPEED=1.0
+export LAZY_READER_OPENROUTER_SPEED=1.3
 export LAZY_READER_STREAM_PLAYBACK=1
 ```
 
