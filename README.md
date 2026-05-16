@@ -20,6 +20,9 @@ selected text to OpenRouter before the spoken result comes back. Keep API keys i
 environment variables, not tracked files, and only use hosted helpers for text you
 are comfortable sending to a third-party service.
 
+For runtime TTS provider/model/voice switching, see
+[TTS providers, models, and voices](docs/tts-providers.md).
+
 ## Enable in NixOS
 
 Import the module in your NixOS config:
