@@ -205,13 +205,26 @@ _speak_openrouter() {
 
 	local response_file
 	response_file="$(mktemp --suffix=".mp3")"
+	local curl_status=0
+	local http_status
 
-	if ! curl --fail --silent --show-error https://openrouter.ai/api/v1/audio/speech \
+	http_status="$(curl --fail-with-body --silent --show-error --write-out '%{http_code}' https://openrouter.ai/api/v1/audio/speech \
 		-H "Authorization: Bearer $api_key" \
 		-H "Content-Type: application/json" \
 		-d "$payload" \
-		-o "$response_file"; then
-		notify "OpenRouter TTS request failed."
+		-o "$response_file")" || curl_status=$?
+
+	if ((curl_status != 0)); then
+		local error_detail
+		error_detail=""
+		if [[ -s "$response_file" ]]; then
+			error_detail="$(tr '\n' ' ' < "$response_file" | head -c 240)"
+		fi
+		if [[ -n "$error_detail" ]]; then
+			notify "OpenRouter TTS request failed (HTTP ${http_status:-000}): $error_detail"
+		else
+			notify "OpenRouter TTS request failed (HTTP ${http_status:-000}, curl exit $curl_status)."
+		fi
 		exit 1
 	fi
 
