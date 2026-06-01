@@ -124,8 +124,8 @@ When both path- and URL-based options are set, URL-based options take precedence
 6. (Optional) Press `Super+W` (when `enableSummarizeInGnome = true`) to compress a longer selected passage into a spoken summary.
 7. (Optional) Press `Super+Q` (when `enableProblemSolverInGnome = true`) to generate a concise solution/answer and read it aloud.
 8. (Optional) Press `Super+Shift+A` (when `enableAskInGnome = true`) to ask a typed follow-up question about the selected text and hear the answer.
-9. (Optional) Press `Super+P` (when `enableTeachInGnome = true`) to get a plain-language ELI5 explanation of a selected book page and hear it aloud.
-10. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, `Super+Shift+A`, or `Super+P`) to stop/cancel immediately.
+9. (Optional) Press `Super+T` (when `enableTeachInGnome = true`) to get a plain-language ELI5 explanation of a selected book page and hear it aloud.
+10. Press the same shortcut again while running (`Super+S`, `Super+E`, `Super+A`, `Super+W`, `Super+Q`, `Super+Shift+A`, or `Super+T`) to stop/cancel immediately.
 
 If no text is selected, it shows a notification.
 
@@ -494,7 +494,7 @@ Optional runtime tuning vars for the OpenRouter teach script:
 - `LAZY_READER_TEACH_MAX_TOKENS` — override max tokens (default: `1800`)
 - `LAZY_READER_TEACH_TEMPERATURE` — override temperature (default: `0.2`)
 
-Default teach hotkey in GNOME is `services.lazy-reader.gnomeTeachShortcut = "<Super>p"`. The module automatically clears the GNOME `Super+P` display-switch binding when `clearDefaultSuperPInGnome = true` (the default) and the shortcut is `<Super>p`.
+Default teach hotkey in GNOME is `services.lazy-reader.gnomeTeachShortcut = "<Super>p"`.
 
 **Command contract summary:**
 

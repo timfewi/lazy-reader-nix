@@ -264,12 +264,6 @@ pkgs.writeShellApplication {
                 teach_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader teach"'
                 teach_shortcut='${cfg.gnomeTeachShortcut}'
 
-                ${lib.optionalString cfg.clearDefaultSuperPInGnome ''
-                  if [[ "$teach_shortcut" == "<Super>p" ]]; then
-                    gsettings set org.gnome.settings-daemon.plugins.media-keys switch-monitor "[]" || true
-                  fi
-                ''}
-
                 current_teach="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
 
                 updated_teach="$(python3 - "$current_teach" "$teach_key_path" <<'PY'

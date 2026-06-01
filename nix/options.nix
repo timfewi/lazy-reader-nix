@@ -312,14 +312,8 @@
 
   gnomeTeachShortcut = lib.mkOption {
     type = lib.types.str;
-    default = "<Super>p";
-    description = "GNOME keybinding string used to trigger teach mode (default: Super+P).";
-  };
-
-  clearDefaultSuperPInGnome = lib.mkOption {
-    type = lib.types.bool;
-    default = true;
-    description = "Clear GNOME default Super+P binding (switch-monitor) to avoid shortcut conflict when gnomeTeachShortcut is <Super>p.";
+    default = "<Super>t";
+    description = "GNOME keybinding string used to trigger teach mode (default: Super+T).";
   };
 
   ttsProvider = lib.mkOption {
