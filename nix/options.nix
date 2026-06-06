@@ -79,7 +79,7 @@
 
   maxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 2400;
+    default = 24000;
     description = "Maximum characters per Piper chunk for plain reading, and maximum selected characters sent to explain/solve/ask preprocessing.";
   };
 
@@ -113,7 +113,7 @@
 
   generatedSpeechChunkMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 1400;
+    default = 14000;
     description = "Maximum characters per Piper chunk for AI-generated outputs such as narrate, explain, summarize, solve, and ask.";
   };
 
@@ -136,13 +136,13 @@
 
   narrateMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 2400;
+    default = 24000;
     description = "Maximum characters of narrateCommand output passed to TTS.";
   };
 
   narrateInputMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 4800;
+    default = 48000;
     description = "Maximum selected characters passed to narrateCommand before backend processing.";
   };
 
@@ -172,7 +172,7 @@
 
   explainMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 2400;
+    default = 24000;
     description = "Maximum characters of explainCommand output passed to TTS.";
   };
 
@@ -205,13 +205,13 @@
 
   summarizeMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 3200;
+    default = 32000;
     description = "Maximum characters of summarizeCommand output passed to TTS.";
   };
 
   summarizeInputMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 6000;
+    default = 60000;
     description = "Maximum selected characters passed to summarizeCommand before backend processing.";
   };
 
@@ -235,7 +235,7 @@
 
   problemSolverMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 2400;
+    default = 24000;
     description = "Maximum selected characters passed to problemSolverCommand.";
   };
 
@@ -270,7 +270,7 @@
 
   askMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 2400;
+    default = 24000;
     description = "Maximum characters of ask command output passed to TTS.";
   };
 
@@ -294,13 +294,13 @@
 
   teachMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 3000;
+    default = 30000;
     description = "Maximum characters of teachCommand output passed to TTS.";
   };
 
   teachInputMaxChars = lib.mkOption {
     type = lib.types.ints.positive;
-    default = 5000;
+    default = 50000;
     description = "Maximum selected characters passed to teachCommand before backend processing.";
   };
 

@@ -70,7 +70,7 @@ Import the module in your NixOS config:
     # gnomeProblemSolverShortcut = "<Super>q"; # default shortcut for solver mode
     # clearDefaultSuperQInGnome = true; # removes <Super>q from GNOME window-close binding
     # problemSolverCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
-    # problemSolverMaxChars = 2400;
+    # problemSolverMaxChars = 24000;
   };
 }
 ```
@@ -213,7 +213,7 @@ Priority is env var first, then Nix option (`LAZY_READER_SPEED` / `services.lazy
 
 Compatibility note: older setups may remember `LAZY_READER_SPEED` feeling faster because playback was also accelerated. To restore that exact behavior, set `playbackSpeed` (or `LAZY_READER_PLAYBACK_SPEED`) equal to `speed`.
 
-Long AI-generated outputs (narrate, explain, summarize, solve, ask, teach) are also spoken in bounded Piper chunks now, using `services.lazy-reader.generatedSpeechChunkMaxChars` (default `1400`). This is meant to reduce fast/garbled synthesis on longer technical passages, at the cost of small extra pauses between long sections.
+Long AI-generated outputs (narrate, explain, summarize, solve, ask, teach) are also spoken in bounded Piper chunks now, using `services.lazy-reader.generatedSpeechChunkMaxChars` (default `14000`). This gives the AI plenty of room for long-form narration while keeping synthesis manageable.
 
 ### Narrate mode (selected text → faithful spoken rendering → speech)
 
@@ -232,9 +232,9 @@ Example with the bundled OpenRouter helper:
 services.lazy-reader = {
   enableNarrateInGnome = true;
   gnomeNarrateShortcut = "<Super>e";  # default
-  generatedSpeechChunkMaxChars = 1400;
-  narrateInputMaxChars = 4800;
-  narrateMaxChars = 2400;
+  generatedSpeechChunkMaxChars = 14000;
+  narrateInputMaxChars = 48000;
+  narrateMaxChars = 24000;
   narrateCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/narrate-openrouter.sh;
 };
 ```
@@ -244,10 +244,10 @@ The bundled `scripts/narrate-openrouter.sh` helper is meant for docs/code-heavy 
 Optional runtime tuning vars for the bundled narrate script:
 
 - `LAZY_READER_NARRATE_MODEL` (default: `x-ai/grok-4.1-fast`)
-- `LAZY_READER_NARRATE_MAX_TOKENS` (default: `2400`)
+- `LAZY_READER_NARRATE_MAX_TOKENS` (default: `240000`)
 - `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
-- `LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS` (default: `1400`)
-- `LAZY_READER_NARRATE_INPUT_MAX_CHARS` (default: `4800`)
+- `LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS` (default: `14000`)
+- `LAZY_READER_NARRATE_INPUT_MAX_CHARS` (default: `48000`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
 Default narrate hotkey in GNOME is `services.lazy-reader.gnomeNarrateShortcut = "<Super>e"`. No extra GNOME conflict-clearing option is needed for that default. Older configs may still mention `clearDefaultSuperNInGnome`; it is now a deprecated no-op for backward compatibility.
@@ -290,9 +290,9 @@ Optional runtime tuning vars for the OpenRouter script:
 
 Current defaults in `scripts/explain-openrouter.sh` are fixed to:
 
-- model: `x-ai/grok-4.1-fast`
-- max tokens: `1200`
-- temperature: `0.1`
+- model: `x-ai/grok-4.1-fast` (configurable via `LAZY_READER_EXPLAIN_MODEL`)
+- max tokens: `12000` (configurable via `LAZY_READER_EXPLAIN_MAX_TOKENS`)
+- temperature: `0.1` (configurable via `LAZY_READER_EXPLAIN_TEMPERATURE`)
 
 If you want these configurable via environment variables, edit that script.
 
@@ -327,8 +327,8 @@ Example with the bundled OpenRouter script:
 services.lazy-reader = {
   enableSummarizeInGnome = true;
   gnomeSummarizeShortcut = "<Super>w";
-  summarizeMaxChars = 3200; # larger spoken-output budget than explain
-  summarizeInputMaxChars = 6000; # larger default input budget than explain
+  summarizeMaxChars = 32000; # larger spoken-output budget than explain
+  summarizeInputMaxChars = 60000; # larger default input budget than explain
   summarizeCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/summarize-openrouter.sh;
 };
 ```
@@ -336,7 +336,7 @@ services.lazy-reader = {
 Optional runtime tuning vars for the bundled summarize script:
 
 - `LAZY_READER_SUMMARIZE_MODEL` (default: `openai/gpt-5.4-mini`)
-- `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `3200`)
+- `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `32000`)
 - `LAZY_READER_SUMMARIZE_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
@@ -377,7 +377,7 @@ services.lazy-reader = {
 Optional runtime tuning vars for the OpenRouter solver script:
 
 - `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `x-ai/grok-4.1-fast`)
-- `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `1600`)
+- `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `16000`)
 - `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
 
@@ -426,23 +426,24 @@ Optional runtime tuning vars for the OpenRouter ask script:
 
 Current defaults in `scripts/ask-openrouter.sh` are fixed to:
 
-- model: `x-ai/grok-4.1-fast`
-- max tokens: `1200`
-- temperature: `0.2`
+- model: `x-ai/grok-4.1-fast` (configurable via `LAZY_READER_ASK_MODEL`)
+- max tokens: `12000` (configurable via `LAZY_READER_ASK_MAX_TOKENS`)
+- temperature: `0.2` (configurable via `LAZY_READER_ASK_TEMPERATURE`)
 
 If you want these configurable via environment variables, edit that script.
 
 **Command contract summary:**
 
-| Channel | Content |
-|---------|---------|
-| stdin | Selected text (trimmed to `maxChars`) |
-| `LAZY_READER_ASK_QUESTION` env var | Typed question from the zenity dialog |
-| stdout | Answer text (trimmed to `askMaxChars`, then spoken) |
+| Channel                            | Content                                             |
+| ---------------------------------- | --------------------------------------------------- |
+| stdin                              | Selected text (trimmed to `maxChars`)               |
+| `LAZY_READER_ASK_QUESTION` env var | Typed question from the zenity dialog               |
+| stdout                             | Answer text (trimmed to `askMaxChars`, then spoken) |
 
 **Flow:**
+
 1. Press `Super+Shift+A` — script captures selected text.
-2. A small `zenity` entry dialog appears: *"Your question about the selected text:"*
+2. A small `zenity` entry dialog appears: _"Your question about the selected text:"_
 3. Type your question and press Enter (or Cancel to abort gracefully).
 4. The ask command runs with the text on stdin and the question in `LAZY_READER_ASK_QUESTION`.
 5. The answer is spoken aloud by Piper TTS.
@@ -482,8 +483,8 @@ services.lazy-reader = {
   enable = true;
   enableTeachInGnome = true;
   gnomeTeachShortcut = "<Super>p";  # default
-  teachMaxChars = 3000;
-  teachInputMaxChars = 5000;
+  teachMaxChars = 30000;
+  teachInputMaxChars = 50000;
   teachCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/teach-openrouter.sh;
 };
 ```
@@ -491,17 +492,17 @@ services.lazy-reader = {
 Optional runtime tuning vars for the OpenRouter teach script:
 
 - `LAZY_READER_TEACH_MODEL` — override the model (default: `x-ai/grok-4.1-fast`)
-- `LAZY_READER_TEACH_MAX_TOKENS` — override max tokens (default: `1800`)
+- `LAZY_READER_TEACH_MAX_TOKENS` — override max tokens (default: `18000`)
 - `LAZY_READER_TEACH_TEMPERATURE` — override temperature (default: `0.2`)
 
 Default teach hotkey in GNOME is `services.lazy-reader.gnomeTeachShortcut = "<Super>p"`.
 
 **Command contract summary:**
 
-| Channel | Content |
-|---------|---------|
-| stdin | Selected book text (trimmed to `teachInputMaxChars`) |
-| stdout | ELI5 explanation (trimmed to `teachMaxChars`, then spoken) |
+| Channel | Content                                                    |
+| ------- | ---------------------------------------------------------- |
+| stdin   | Selected book text (trimmed to `teachInputMaxChars`)       |
+| stdout  | ELI5 explanation (trimmed to `teachMaxChars`, then spoken) |
 
 Quick manual test:
 
