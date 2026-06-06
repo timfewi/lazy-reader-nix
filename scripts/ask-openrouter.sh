@@ -5,7 +5,7 @@ set -o pipefail
 # Reads selected text from stdin and LAZY_READER_ASK_QUESTION from the environment,
 # then prints a concise spoken-language answer to stdout.
 input="$(cat)"
-model="${LAZY_READER_ASK_MODEL:-x-ai/grok-4.1-fast}"
+model="${LAZY_READER_ASK_MODEL:-qwen/qwen3.6-flash}"
 max_tokens="${LAZY_READER_ASK_MAX_TOKENS:-12000}"
 temperature="${LAZY_READER_ASK_TEMPERATURE:-0.2}"
 

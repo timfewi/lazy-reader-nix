@@ -34,343 +34,307 @@ INPUT_SOURCE="selection"
 MODE="toggle"
 
 usage() {
-  printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
+	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
 }
 
 parse_args() {
-  local has_mode=0
-  local next_arg
+	local has_mode=0
+	local next_arg
 
-  while (($#)); do
-    case "$1" in
-      --stdin)
-        INPUT_SOURCE="stdin"
-        ;;
-      --input-source)
-        if (($# < 2)); then
-          printf '%s\n' "error: --input-source requires a value" >&2
-          return 1
-        fi
-        next_arg="$2"
-        INPUT_SOURCE="$next_arg"
-        shift
-        ;;
-      --input-source=*)
-        INPUT_SOURCE="${1#*=}"
-        ;;
-      --help|-h)
-        usage
-        exit 0
-        ;;
-      stop|toggle|start|status|narrate|explain|summarize|solve|ask|teach)
-        if (( has_mode )); then
-          printf '%s\n' "error: multiple commands provided" >&2
-          return 1
-        fi
-        MODE="$1"
-        has_mode=1
-        ;;
-      *)
-        printf '%s\n' "error: unknown argument: $1" >&2
-        return 1
-        ;;
-    esac
-    shift
-  done
+	while (($#)); do
+		case "$1" in
+		--stdin)
+			INPUT_SOURCE="stdin"
+			;;
+		--input-source)
+			if (($# < 2)); then
+				printf '%s\n' "error: --input-source requires a value" >&2
+				return 1
+			fi
+			next_arg="$2"
+			INPUT_SOURCE="$next_arg"
+			shift
+			;;
+		--input-source=*)
+			INPUT_SOURCE="${1#*=}"
+			;;
+		--help | -h)
+			usage
+			exit 0
+			;;
+		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach)
+			if ((has_mode)); then
+				printf '%s\n' "error: multiple commands provided" >&2
+				return 1
+			fi
+			MODE="$1"
+			has_mode=1
+			;;
+		*)
+			printf '%s\n' "error: unknown argument: $1" >&2
+			return 1
+			;;
+		esac
+		shift
+	done
 
-  case "$INPUT_SOURCE" in
-    selection|stdin)
-      ;;
-    *)
-      printf '%s\n' "error: unsupported input source: $INPUT_SOURCE" >&2
-      return 1
-      ;;
-  esac
+	case "$INPUT_SOURCE" in
+	selection | stdin)
+		;;
+	*)
+		printf '%s\n' "error: unsupported input source: $INPUT_SOURCE" >&2
+		return 1
+		;;
+	esac
 }
 
 missing_input_message() {
-  local selection_message="$1"
+	local selection_message="$1"
 
-  if [[ "$INPUT_SOURCE" == "stdin" ]]; then
-    printf '%s\n' "No stdin text found. Pipe text to lazy-reader."
-    return 0
-  fi
+	if [[ "$INPUT_SOURCE" == "stdin" ]]; then
+		printf '%s\n' "No stdin text found. Pipe text to lazy-reader."
+		return 0
+	fi
 
-  printf '%s\n' "$selection_message"
+	printf '%s\n' "$selection_message"
 }
 
 require_input_text() {
-  local selection_message="$1"
-  local max_chars="${2:-}"
-  local text
+	local selection_message="$1"
+	local max_chars="${2:-}"
+	local text
 
-  if ! text="$(read_input_text "$INPUT_SOURCE")"; then
-    notify "$(missing_input_message "$selection_message")"
-    exit 1
-  fi
+	if ! text="$(read_input_text "$INPUT_SOURCE")"; then
+		notify "$(missing_input_message "$selection_message")"
+		exit 1
+	fi
 
-  if [[ -z "${text//[[:space:]]/}" ]]; then
-    notify "$(missing_input_message "$selection_message")"
-    exit 1
-  fi
+	if [[ -z "${text//[[:space:]]/}" ]]; then
+		notify "$(missing_input_message "$selection_message")"
+		exit 1
+	fi
 
-  if [[ -n "$max_chars" ]]; then
-    text="$(trim_text "$text" "$max_chars")"
-  fi
+	if [[ -n "$max_chars" ]]; then
+		text="$(trim_text "$text" "$max_chars")"
+	fi
 
-  printf '%s' "$text"
+	printf '%s' "$text"
 }
 
 start_reading() {
-  validate_config
+	validate_config
 
-  local text
-  local section_index=0
-  local section_kind
-  local section_text
-  text="$(require_input_text "No selected text found. Highlight text and press Super+S.")"
+	local text
+	local section_index=0
+	local section_kind
+	local section_text
+	text="$(require_input_text "No selected text found. Highlight text and press Super+S.")"
 
-  while IFS= read -r -d '' section_kind && IFS= read -r -d '' section_text; do
-    if (( section_index == 0 )); then
-      speak_reading_section "$section_kind" "$section_text" "Reading selected text..."
-    else
-      speak_reading_section "$section_kind" "$section_text" ""
-    fi
-    ((section_index += 1))
-  done < <(split_text_into_reading_sections "$text")
+	while IFS= read -r -d '' section_kind && IFS= read -r -d '' section_text; do
+		if ((section_index == 0)); then
+			speak_reading_section "$section_kind" "$section_text" "Reading selected text..."
+		else
+			speak_reading_section "$section_kind" "$section_text" ""
+		fi
+		((section_index += 1))
+	done < <(split_text_into_reading_sections "$text")
 }
 
 speak_generated_text() {
-  local text="$1"
-  local started_message="$2"
-  local chunk
-  local chunk_index=0
+	local text="$1"
+	local started_message="$2"
+	local chunk
+	local chunk_index=0
 
-  while IFS= read -r -d '' chunk; do
-    if (( chunk_index == 0 )); then
-      speak_text "$chunk" "$started_message"
-    else
-      speak_text "$chunk" ""
-    fi
-    ((chunk_index += 1))
-  done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
+	while IFS= read -r -d '' chunk; do
+		if ((chunk_index == 0)); then
+			speak_text "$chunk" "$started_message"
+		else
+			speak_text "$chunk" ""
+		fi
+		((chunk_index += 1))
+	done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
 }
 
 speak_reading_section() {
-  local section_kind="$1"
-  local section_text="$2"
-  local started_message="$3"
-  local chunk
-  local chunk_index=0
+	local section_kind="$1"
+	local section_text="$2"
+	local started_message="$3"
+	local chunk
+	local chunk_index=0
 
-  if [[ "$section_kind" == "code" ]]; then
-    if [[ -n "$EXPLAIN_CMD" ]]; then
-      section_text="$(trim_text "$section_text" "$MAX_CHARS")"
-      speak_generated_text "$(run_explainer "$section_text")" "$started_message"
-      return 0
-    fi
+	if [[ "$section_kind" == "code" ]]; then
+		if [[ -n "$EXPLAIN_CMD" ]]; then
+			section_text="$(trim_text "$section_text" "$MAX_CHARS")"
+			speak_generated_text "$(run_explainer "$section_text")" "$started_message"
+			return 0
+		fi
 
-    if [[ -n "$NARRATE_CMD" ]]; then
-      section_text="$(trim_text "$section_text" "$NARRATE_INPUT_MAX_CHARS")"
-      speak_generated_text "$(run_narrator "$section_text")" "$started_message"
-      return 0
-    fi
-  fi
+		if [[ -n "$NARRATE_CMD" ]]; then
+			section_text="$(trim_text "$section_text" "$NARRATE_INPUT_MAX_CHARS")"
+			speak_generated_text "$(run_narrator "$section_text")" "$started_message"
+			return 0
+		fi
+	fi
 
-  while IFS= read -r -d '' chunk; do
-    if (( chunk_index == 0 )); then
-      speak_text "$chunk" "$started_message"
-    else
-      speak_text "$chunk" ""
-    fi
-    ((chunk_index += 1))
-  done < <(chunk_text_for_reading "$section_text" "$MAX_CHARS")
+	while IFS= read -r -d '' chunk; do
+		if ((chunk_index == 0)); then
+			speak_text "$chunk" "$started_message"
+		else
+			speak_text "$chunk" ""
+		fi
+		((chunk_index += 1))
+	done < <(chunk_text_for_reading "$section_text" "$MAX_CHARS")
 }
 
 narrate_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a passage and press your narrate shortcut." "$NARRATE_INPUT_MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a passage and press your narrate shortcut." "$NARRATE_INPUT_MAX_CHARS")"
 
-  local narrated_text
-  narrated_text="$(run_narrator "$text")"
+	local narrated_text
+	narrated_text="$(run_narrator "$text")"
 
-  speak_generated_text "$narrated_text" "Reading narration..."
+	speak_generated_text "$narrated_text" "Reading narration..."
 }
 
 explain_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a snippet and press your explain shortcut." "$MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a snippet and press your explain shortcut." "$MAX_CHARS")"
 
-  local explained_text
-  explained_text="$(run_explainer "$text")"
+	local explained_text
+	explained_text="$(run_explainer "$text")"
 
-  speak_generated_text "$explained_text" "Reading explanation..."
+	speak_generated_text "$explained_text" "Reading explanation..."
 }
 
 summarize_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a passage and press your summarize shortcut." "$SUMMARIZE_INPUT_MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a passage and press your summarize shortcut." "$SUMMARIZE_INPUT_MAX_CHARS")"
 
-  local summarized_text
-  summarized_text="$(run_summarizer "$text")"
+	local summarized_text
+	summarized_text="$(run_summarizer "$text")"
 
-  speak_generated_text "$summarized_text" "Reading summary..."
+	speak_generated_text "$summarized_text" "Reading summary..."
 }
 
 solve_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a snippet and press your solve shortcut." "$MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a snippet and press your solve shortcut." "$MAX_CHARS")"
 
-  local solved_text
-  solved_text="$(run_problem_solver "$text")"
+	local solved_text
+	solved_text="$(run_problem_solver "$text")"
 
-  speak_generated_text "$solved_text" "Reading solution..."
+	speak_generated_text "$solved_text" "Reading solution..."
 }
 
 ask_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a snippet and press your ask shortcut." "$MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a snippet and press your ask shortcut." "$MAX_CHARS")"
 
-  local answered_text
-  local answer_file
-  local ask_status
-  answer_file="$(mktemp)"
-  if run_asker "$text" > "$answer_file"; then
-    answered_text="$(cat "$answer_file")"
-  else
-    ask_status=$?
-    rm -f "$answer_file"
-    if [[ "$ask_status" -eq 2 ]]; then
-      exit 0
-    fi
-    exit "$ask_status"
-  fi
-  rm -f "$answer_file"
+	local answered_text
+	local answer_file
+	local ask_status
+	answer_file="$(mktemp)"
+	if run_asker "$text" >"$answer_file"; then
+		answered_text="$(cat "$answer_file")"
+	else
+		ask_status=$?
+		rm -f "$answer_file"
+		if [[ "$ask_status" -eq 2 ]]; then
+			exit 0
+		fi
+		exit "$ask_status"
+	fi
+	rm -f "$answer_file"
 
-  if [[ -z "${answered_text//[[:space:]]/}" ]]; then
-    exit 0
-  fi
+	if [[ -z "${answered_text//[[:space:]]/}" ]]; then
+		exit 0
+	fi
 
-  speak_generated_text "$answered_text" "Reading answer..."
+	speak_generated_text "$answered_text" "Reading answer..."
 }
 
 teach_selection() {
-  validate_config
+	validate_config
 
-  local text
-  text="$(require_input_text "No selected text found. Highlight a passage and press your teach shortcut." "$TEACH_INPUT_MAX_CHARS")"
+	local text
+	text="$(require_input_text "No selected text found. Highlight a passage and press your teach shortcut." "$TEACH_INPUT_MAX_CHARS")"
 
-  local taught_text
-  taught_text="$(run_teacher "$text")"
+	local taught_text
+	taught_text="$(run_teacher "$text")"
 
-  speak_generated_text "$taught_text" "Reading explanation..."
+	speak_generated_text "$taught_text" "Reading explanation..."
 }
 
 main() {
-  mkdir -p "$RUNTIME_DIR"
-  cleanup_stale_pid_file
+	mkdir -p "$RUNTIME_DIR"
+	cleanup_stale_pid_file
 
-  if ! parse_args "$@"; then
-    notify "$(usage)"
-    exit 1
-  fi
+	if ! parse_args "$@"; then
+		notify "$(usage)"
+		exit 1
+	fi
 
-  case "$MODE" in
-    stop)
-      stop_running_reader
-      exit 0
-      ;;
-    toggle)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    start)
-      if is_running; then
-        notify "Already reading. Press Super+S again to stop."
-        exit 0
-      fi
-      ;;
-    status)
-      if is_running; then
-        echo "reading"
-      else
-        echo "idle"
-      fi
-      exit 0
-      ;;
-    explain)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    summarize)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    narrate)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    solve)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    ask)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    teach)
-      if is_running; then
-        stop_running_reader
-        exit 0
-      fi
-      ;;
-    *)
-      notify "$(usage)"
-      exit 1
-      ;;
-  esac
+	case "$MODE" in
+	stop)
+		stop_running_reader
+		exit 0
+		;;
+	toggle)
+		if is_running; then
+			stop_running_reader
+			exit 0
+		fi
+		;;
+	start)
+		if is_running; then
+			notify "Already reading. Press Super+S again to stop."
+			exit 0
+		fi
+		;;
+	status)
+		if is_running; then
+			echo "reading"
+		else
+			echo "idle"
+		fi
+		exit 0
+		;;
+	explain | summarize | narrate | solve | ask | teach)
+		if is_running; then
+			stop_running_reader
+			exit 0
+		fi
+		;;
+	*)
+		notify "$(usage)"
+		exit 1
+		;;
+	esac
 
-  echo "$$" > "$PID_FILE"
-  OWNS_PID_FILE="1"
-  trap cleanup EXIT INT TERM
+	echo "$$" >"$PID_FILE"
+	OWNS_PID_FILE="1"
+	trap cleanup EXIT INT TERM
 
-  if [[ "$MODE" == "narrate" ]]; then
-    narrate_selection
-  elif [[ "$MODE" == "explain" ]]; then
-    explain_selection
-  elif [[ "$MODE" == "summarize" ]]; then
-    summarize_selection
-  elif [[ "$MODE" == "solve" ]]; then
-    solve_selection
-  elif [[ "$MODE" == "ask" ]]; then
-    ask_selection
-  elif [[ "$MODE" == "teach" ]]; then
-    teach_selection
-  else
-    start_reading
-  fi
+	case "$MODE" in
+	narrate) narrate_selection ;;
+	explain) explain_selection ;;
+	summarize) summarize_selection ;;
+	solve) solve_selection ;;
+	ask) ask_selection ;;
+	teach) teach_selection ;;
+	*) start_reading ;;
+	esac
 }
 
 main "$@"

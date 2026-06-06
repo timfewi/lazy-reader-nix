@@ -3,6 +3,79 @@
   pkgs,
   lib,
 }:
+let
+  # Generate shell code to register a single GNOME custom keybinding.
+  mkBinding =
+    {
+      name,
+      commandSuffix,
+      shortcut,
+      clearShortcut ? null,
+      clearCheck ? shortcut,
+      preHook ? "",
+    }:
+    let
+      escapedName = lib.escapeShellArg name;
+      keyPath = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader${
+        lib.optionalString (commandSuffix != "") "-${commandSuffix}"
+      }/";
+      fullCommand = "${pkgs.zsh}/bin/zsh -lc ''source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader ${commandSuffix}''";
+    in
+    ''
+        ${preHook}
+
+        ${lib.optionalString (clearShortcut != null) ''
+          if [[ "${shortcut}" == "${clearCheck}" ]]; then
+            gsettings set ${clearShortcut} "[]" || true
+          fi
+        ''}
+
+        current="$(${pkgs.glib.bin}/bin/gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
+
+        updated="$(${pkgs.python3}/bin/python3 - "$current" '${keyPath}' <<'PY'
+      import ast, sys
+      raw = sys.argv[1].strip()
+      needle = sys.argv[2]
+      if raw.startswith("@as"):
+          raw = "[]"
+      try:
+          data = ast.literal_eval(raw)
+      except Exception:
+          data = []
+      if needle not in data:
+          data.append(needle)
+      print("[" + ", ".join(repr(item) for item in data) + "]")
+      PY
+        )"
+
+        ${pkgs.glib.bin}/bin/gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated"
+        ${pkgs.glib.bin}/bin/gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"${keyPath}" name ${escapedName}
+        ${pkgs.glib.bin}/bin/gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"${keyPath}" command '${fullCommand}'
+        ${pkgs.glib.bin}/bin/gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"${keyPath}" binding "${shortcut}"
+    '';
+
+  # Remove a single shortcut value from a gsettings array (e.g. <Super>q from window close).
+  removeFromArray =
+    { gsettingsPath, value }:
+    ''
+        current="$(${pkgs.glib.bin}/bin/gsettings get ${gsettingsPath})"
+        updated="$(${pkgs.python3}/bin/python3 - "$current" <<'PY'
+      import ast, sys
+      raw = sys.argv[1].strip()
+      if raw.startswith("@as"):
+          raw = "[]"
+      try:
+          data = ast.literal_eval(raw)
+      except Exception:
+          data = []
+      data = [item for item in data if item != sys.argv[2]]
+      print("[" + ", ".join(repr(item) for item in data) + "]")
+      PY
+          "${value}"
+        )"
+        ${pkgs.glib.bin}/bin/gsettings set ${gsettingsPath} "$updated" || true
+    '';
+in
 pkgs.writeShellApplication {
   name = "lazy-reader-bind-gnome";
   runtimeInputs = with pkgs; [
@@ -11,287 +84,58 @@ pkgs.writeShellApplication {
     python3
   ];
   text = ''
-        if ! gsettings get org.gnome.desktop.interface color-scheme >/dev/null 2>&1; then
-          exit 0
-        fi
-
-        key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader/'
-        command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader"'
-        shortcut='${cfg.gnomeShortcut}'
-
-        ${lib.optionalString cfg.clearDefaultSuperSInGnome ''
-          if [[ "$shortcut" == "<Super>s" ]]; then
-            gsettings set org.gnome.shell.keybindings toggle-quick-settings "[]" || true
-          fi
-        ''}
-
-        current="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-        updated="$(python3 - "$current" "$key_path" <<'PY'
-    import ast
-    import sys
-
-    raw = sys.argv[1].strip()
-    needle = sys.argv[2]
-
-    if raw.startswith("@as"):
-        raw = "[]"
-
-    try:
-        data = ast.literal_eval(raw)
-    except Exception:
-        data = []
-
-    if needle not in data:
-        data.append(needle)
-
-    print("[" + ", ".join(repr(item) for item in data) + "]")
-    PY
-    )"
-
-        gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated"
-        gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$key_path" name 'Lazy Reader'
-        gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$key_path" command "$command"
-        gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$key_path" binding "$shortcut"
-
-        ${lib.optionalString cfg.enableNarrateInGnome ''
-                narrate_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-narrate/'
-                narrate_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader narrate"'
-                narrate_shortcut='${cfg.gnomeNarrateShortcut}'
-
-                current_n="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_n="$(python3 - "$current_n" "$narrate_key_path" <<'PY'
-          import ast
-          import sys
-
-          raw = sys.argv[1].strip()
-          needle = sys.argv[2]
-
-          if raw.startswith("@as"):
-              raw = "[]"
-
-          try:
-              data = ast.literal_eval(raw)
-          except Exception:
-              data = []
-
-          if needle not in data:
-              data.append(needle)
-
-          print("[" + ", ".join(repr(item) for item in data) + "]")
-          PY
-          )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_n"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" name 'Lazy Reader Narrate'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" command "$narrate_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$narrate_key_path" binding "$narrate_shortcut"
-        ''}
-
-        ${lib.optionalString cfg.enableExplainInGnome ''
-                explain_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-explain/'
-                explain_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader explain"'
-                explain_shortcut='${cfg.gnomeExplainShortcut}'
-
-                ${lib.optionalString cfg.clearDefaultSuperAInGnome ''
-                  if [[ "$explain_shortcut" == "<Super>a" ]]; then
-                    gsettings set org.gnome.shell.keybindings toggle-application-view "[]" || true
-                  fi
-                ''}
-
-                current_e="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_e="$(python3 - "$current_e" "$explain_key_path" <<'PY'
-          import ast
-          import sys
-
-          raw = sys.argv[1].strip()
-          needle = sys.argv[2]
-
-          if raw.startswith("@as"):
-              raw = "[]"
-
-          try:
-              data = ast.literal_eval(raw)
-          except Exception:
-              data = []
-
-          if needle not in data:
-              data.append(needle)
-
-          print("[" + ", ".join(repr(item) for item in data) + "]")
-          PY
-          )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_e"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$explain_key_path" name 'Lazy Reader Explain'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$explain_key_path" command "$explain_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$explain_key_path" binding "$explain_shortcut"
-        ''}
-
-        ${lib.optionalString cfg.enableSummarizeInGnome ''
-                summarize_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-summarize/'
-                summarize_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader summarize"'
-                summarize_shortcut='${cfg.gnomeSummarizeShortcut}'
-
-                current_sum="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_sum="$(python3 - "$current_sum" "$summarize_key_path" <<'PY'
-          import ast
-          import sys
-
-          raw = sys.argv[1].strip()
-          needle = sys.argv[2]
-
-          if raw.startswith("@as"):
-              raw = "[]"
-
-          try:
-              data = ast.literal_eval(raw)
-          except Exception:
-              data = []
-
-          if needle not in data:
-              data.append(needle)
-
-          print("[" + ", ".join(repr(item) for item in data) + "]")
-          PY
-          )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_sum"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" name 'Lazy Reader Summarize'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" command "$summarize_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$summarize_key_path" binding "$summarize_shortcut"
-        ''}
-
-                ${lib.optionalString cfg.enableProblemSolverInGnome ''
-                solver_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-problem-solver/'
-                solver_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader solve"'
-                solver_shortcut='${cfg.gnomeProblemSolverShortcut}'
-
-                ${lib.optionalString cfg.clearDefaultSuperQInGnome ''
-                          if [[ "$solver_shortcut" == "<Super>q" ]]; then
-                            current_close="$(gsettings get org.gnome.desktop.wm.keybindings close)"
-                            updated_close="$(python3 - "$current_close" <<'PY'
-                  import ast
-                  import sys
-
-                  raw = sys.argv[1].strip()
-                  if raw.startswith("@as"):
-                      raw = "[]"
-
-                  try:
-                      data = ast.literal_eval(raw)
-                  except Exception:
-                      data = []
-
-                  data = [item for item in data if item != "<Super>q"]
-                  print("[" + ", ".join(repr(item) for item in data) + "]")
-                  PY
-                            )"
-                            gsettings set org.gnome.desktop.wm.keybindings close "$updated_close" || true
-                          fi
-                ''}
-
-                current_s="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_s="$(python3 - "$current_s" "$solver_key_path" <<'PY'
-              import ast
-              import sys
-
-              raw = sys.argv[1].strip()
-              needle = sys.argv[2]
-
-              if raw.startswith("@as"):
-                raw = "[]"
-
-              try:
-                data = ast.literal_eval(raw)
-              except Exception:
-                data = []
-
-              if needle not in data:
-                data.append(needle)
-
-              print("[" + ", ".join(repr(item) for item in data) + "]")
-              PY
-              )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_s"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$solver_key_path" name 'Lazy Reader Solve'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$solver_key_path" command "$solver_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$solver_key_path" binding "$solver_shortcut"
-            ''}
-
-        ${lib.optionalString cfg.enableAskInGnome ''
-                ask_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-ask/'
-                ask_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader ask"'
-                ask_shortcut='${cfg.gnomeAskShortcut}'
-
-                current_ask="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_ask="$(python3 - "$current_ask" "$ask_key_path" <<'PY'
-          import ast
-          import sys
-
-          raw = sys.argv[1].strip()
-          needle = sys.argv[2]
-
-          if raw.startswith("@as"):
-              raw = "[]"
-
-          try:
-              data = ast.literal_eval(raw)
-          except Exception:
-              data = []
-
-          if needle not in data:
-              data.append(needle)
-
-          print("[" + ", ".join(repr(item) for item in data) + "]")
-          PY
-          )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_ask"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$ask_key_path" name 'Lazy Reader Ask'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$ask_key_path" command "$ask_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$ask_key_path" binding "$ask_shortcut"
-        ''}
-
-        ${lib.optionalString cfg.enableTeachInGnome ''
-                teach_key_path='/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader-teach/'
-                teach_command='${pkgs.zsh}/bin/zsh -lc "source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader teach"'
-                teach_shortcut='${cfg.gnomeTeachShortcut}'
-
-                current_teach="$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)"
-
-                updated_teach="$(python3 - "$current_teach" "$teach_key_path" <<'PY'
-          import ast
-          import sys
-
-          raw = sys.argv[1].strip()
-          needle = sys.argv[2]
-
-          if raw.startswith("@as"):
-              raw = "[]"
-
-          try:
-              data = ast.literal_eval(raw)
-          except Exception:
-              data = []
-
-          if needle not in data:
-              data.append(needle)
-
-          print("[" + ", ".join(repr(item) for item in data) + "]")
-          PY
-          )"
-
-                gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$updated_teach"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$teach_key_path" name 'Lazy Reader Teach'
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$teach_key_path" command "$teach_command"
-                gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:"$teach_key_path" binding "$teach_shortcut"
-        ''}
+    if ! gsettings get org.gnome.desktop.interface color-scheme >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    ${mkBinding {
+      name = "Lazy Reader";
+      commandSuffix = "";
+      shortcut = cfg.gnomeShortcut;
+      clearShortcut = lib.optionalString cfg.clearDefaultSuperSInGnome "org.gnome.shell.keybindings toggle-quick-settings";
+      clearCheck = "<Super>s";
+    }}
+
+    ${lib.optionalString cfg.enableNarrateInGnome (mkBinding {
+      name = "Lazy Reader Narrate";
+      commandSuffix = "narrate";
+      shortcut = cfg.gnomeNarrateShortcut;
+    })}
+
+    ${lib.optionalString cfg.enableExplainInGnome (mkBinding {
+      name = "Lazy Reader Explain";
+      commandSuffix = "explain";
+      shortcut = cfg.gnomeExplainShortcut;
+      clearShortcut = lib.optionalString cfg.clearDefaultSuperAInGnome "org.gnome.shell.keybindings toggle-application-view";
+      clearCheck = "<Super>a";
+    })}
+
+    ${lib.optionalString cfg.enableSummarizeInGnome (mkBinding {
+      name = "Lazy Reader Summarize";
+      commandSuffix = "summarize";
+      shortcut = cfg.gnomeSummarizeShortcut;
+    })}
+
+    ${lib.optionalString cfg.enableProblemSolverInGnome (mkBinding {
+      name = "Lazy Reader Solve";
+      commandSuffix = "solve";
+      shortcut = cfg.gnomeProblemSolverShortcut;
+      preHook = lib.optionalString cfg.clearDefaultSuperQInGnome (removeFromArray {
+        gsettingsPath = "org.gnome.desktop.wm.keybindings close";
+        value = "<Super>q";
+      });
+    })}
+
+    ${lib.optionalString cfg.enableAskInGnome (mkBinding {
+      name = "Lazy Reader Ask";
+      commandSuffix = "ask";
+      shortcut = cfg.gnomeAskShortcut;
+    })}
+
+    ${lib.optionalString cfg.enableTeachInGnome (mkBinding {
+      name = "Lazy Reader Teach";
+      commandSuffix = "teach";
+      shortcut = cfg.gnomeTeachShortcut;
+    })}
   '';
 }

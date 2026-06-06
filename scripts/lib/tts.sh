@@ -19,12 +19,12 @@ validate_config() {
 	fi
 
 	case "$OPENROUTER_RESPONSE_FORMAT" in
-		auto|mp3|pcm)
-			;;
-		*)
-			notify "Invalid OpenRouter response format '$OPENROUTER_RESPONSE_FORMAT'. Use auto, mp3, or pcm."
-			exit 1
-			;;
+	auto | mp3 | pcm)
+		;;
+	*)
+		notify "Invalid OpenRouter response format '$OPENROUTER_RESPONSE_FORMAT'. Use auto, mp3, or pcm."
+		exit 1
+		;;
 	esac
 
 	if ! [[ "$GENERATED_SPEECH_CHUNK_MAX_CHARS" =~ ^[0-9]+$ ]] || ((GENERATED_SPEECH_CHUNK_MAX_CHARS <= 0)); then
@@ -77,6 +77,16 @@ validate_config() {
 		exit 1
 	fi
 
+	if ! [[ "$TEACH_MAX_CHARS" =~ ^[0-9]+$ ]] || ((TEACH_MAX_CHARS <= 0)); then
+		notify "Invalid teach max chars '$TEACH_MAX_CHARS'. Use a positive integer."
+		exit 1
+	fi
+
+	if ! [[ "$TEACH_INPUT_MAX_CHARS" =~ ^[0-9]+$ ]] || ((TEACH_INPUT_MAX_CHARS <= 0)); then
+		notify "Invalid teach input max chars '$TEACH_INPUT_MAX_CHARS'. Use a positive integer."
+		exit 1
+	fi
+
 	if [[ "${TTS_PROVIDER:-piper}" == "piper" ]]; then
 		if [[ ! -f "$MODEL" ]]; then
 			notify "Piper model not found at '$MODEL'. Set services.lazy-reader.model to a valid .onnx file path."
@@ -103,26 +113,26 @@ load_tts_config() {
 			key="${line%%=*}"
 			value="${line#*=}"
 			case "$key" in
-				TTS_PROVIDER)
-					TTS_PROVIDER="$value"
-					;;
-				TTS_MODEL)
-					TTS_MODEL="$value"
-					;;
-				TTS_VOICE)
-					TTS_VOICE="$value"
-					;;
+			TTS_PROVIDER)
+				TTS_PROVIDER="$value"
+				;;
+			TTS_MODEL)
+				TTS_MODEL="$value"
+				;;
+			TTS_VOICE)
+				TTS_VOICE="$value"
+				;;
 			esac
-		done < "$config_file"
+		done <"$config_file"
 	fi
 
 	case "$TTS_PROVIDER" in
-		piper|openrouter)
-			;;
-		*)
-			notify "Invalid TTS provider '$TTS_PROVIDER'. Use 'piper' or 'openrouter'."
-			exit 1
-			;;
+	piper | openrouter)
+		;;
+	*)
+		notify "Invalid TTS provider '$TTS_PROVIDER'. Use 'piper' or 'openrouter'."
+		exit 1
+		;;
 	esac
 }
 
@@ -192,19 +202,19 @@ resolve_openrouter_response_format() {
 	local model="$1"
 
 	case "$OPENROUTER_RESPONSE_FORMAT" in
-		mp3|pcm)
-			printf '%s' "$OPENROUTER_RESPONSE_FORMAT"
+	mp3 | pcm)
+		printf '%s' "$OPENROUTER_RESPONSE_FORMAT"
+		;;
+	auto)
+		case "$model" in
+		google/gemini-*tts*)
+			printf 'pcm'
 			;;
-		auto)
-			case "$model" in
-				google/gemini-*tts*)
-					printf 'pcm'
-					;;
-				*)
-					printf 'mp3'
-					;;
-			esac
+		*)
+			printf 'mp3'
 			;;
+		esac
+		;;
 	esac
 }
 
@@ -256,7 +266,7 @@ _speak_openrouter() {
 		local error_detail
 		error_detail=""
 		if [[ -s "$response_file" ]]; then
-			error_detail="$(tr '\n' ' ' < "$response_file" | head -c 240)"
+			error_detail="$(tr '\n' ' ' <"$response_file" | head -c 240)"
 		fi
 		if [[ -n "$error_detail" ]]; then
 			notify "OpenRouter TTS request failed (HTTP ${http_status:-000}): $error_detail"

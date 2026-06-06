@@ -4,7 +4,7 @@ set -o pipefail
 # OpenRouter problem-solver command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a concise, practical answer to stdout.
 input="$(cat)"
-model="${LAZY_READER_PROBLEM_SOLVER_MODEL:-x-ai/grok-4.1-fast}"
+model="${LAZY_READER_PROBLEM_SOLVER_MODEL:-qwen/qwen3.6-flash}"
 max_tokens="${LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS:-16000}"
 temperature="${LAZY_READER_PROBLEM_SOLVER_TEMPERATURE:-0.12}"
 

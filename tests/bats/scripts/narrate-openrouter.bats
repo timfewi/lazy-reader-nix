@@ -44,10 +44,10 @@ teardown() {
   run bash -c "grep -F -- 'let total = sum(items);' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- 'x-ai/grok-4.1-fast' '${jq_log}'"
+  run bash -c "grep -F -- 'qwen/qwen3.6-flash' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- '2400' '${jq_log}'"
+  run bash -c "grep -F -- '32000' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- '0.12' '${jq_log}'"

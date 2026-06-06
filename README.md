@@ -2,6 +2,45 @@
 
 Reads currently selected text out loud with local Piper Text-to-Speech when you press `Super+S` (GNOME Wayland), with optional narrate, explain, summarize, solve, ask, and teach modes.
 
+## Pipeline
+
+```
+You select text
+       │
+       ▼
+┌─────────────────────────────────────────────┐
+│ 1. lazy-reader.sh captures selection        │
+│    (wl-paste --primary, clipboard fallback) │
+│    Trims to NARRATE_INPUT_MAX_CHARS (48k)   │
+└──────────────────┬──────────────────────────┘
+                   │ stdin
+                   ▼
+┌─────────────────────────────────────────────┐
+│ 2. narrate-openrouter.sh                    │
+│    Reads stdin → $input                     │
+│    Calls OpenRouter API:                    │
+│      model = qwen/qwen3.6-flash             │
+│      messages = [system prompt + $input]    │
+│    Gets back rewritten spoken text          │
+│    Prints to stdout                         │
+└──────────────────┬──────────────────────────┘
+                   │ stdout (rewritten text)
+                   ▼
+┌─────────────────────────────────────────────┐
+│ 3. lazy-reader.sh receives rewritten text   │
+│    Trims to NARRATE_MAX_CHARS (24k chars)   │
+│    Chunks into GENERATED_SPEECH_CHUNK_MAX   │
+│    _CHARS (14k chars) segments              │
+└──────────────────┬──────────────────────────┘
+                   │ each chunk
+                   ▼
+┌─────────────────────────────────────────────┐
+│ 4. TTS engine (Piper or OpenRouter TTS)     │
+│    Synthesizes each chunk → audio           │
+│    Plays via mpv/ffplay                     │
+└─────────────────────────────────────────────┘
+```
+
 ## What this repo provides
 
 - `lazy-reader.nix`: NixOS module (`services.lazy-reader`)
@@ -243,7 +282,7 @@ The bundled `scripts/narrate-openrouter.sh` helper is meant for docs/code-heavy 
 
 Optional runtime tuning vars for the bundled narrate script:
 
-- `LAZY_READER_NARRATE_MODEL` (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_NARRATE_MODEL` (default: `qwen/qwen3.6-flash`)
 - `LAZY_READER_NARRATE_MAX_TOKENS` (default: `240000`)
 - `LAZY_READER_NARRATE_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS` (default: `14000`)
@@ -290,7 +329,7 @@ Optional runtime tuning vars for the OpenRouter script:
 
 Current defaults in `scripts/explain-openrouter.sh` are fixed to:
 
-- model: `x-ai/grok-4.1-fast` (configurable via `LAZY_READER_EXPLAIN_MODEL`)
+- model: `qwen/qwen3.6-flash` (configurable via `LAZY_READER_EXPLAIN_MODEL`)
 - max tokens: `12000` (configurable via `LAZY_READER_EXPLAIN_MAX_TOKENS`)
 - temperature: `0.1` (configurable via `LAZY_READER_EXPLAIN_TEMPERATURE`)
 
@@ -335,7 +374,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the bundled summarize script:
 
-- `LAZY_READER_SUMMARIZE_MODEL` (default: `openai/gpt-5.4-mini`)
+- `LAZY_READER_SUMMARIZE_MODEL` (default: `qwen/qwen3.7-plus`)
 - `LAZY_READER_SUMMARIZE_MAX_TOKENS` (default: `32000`)
 - `LAZY_READER_SUMMARIZE_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
@@ -376,7 +415,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the OpenRouter solver script:
 
-- `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_PROBLEM_SOLVER_MODEL` (default: `qwen/qwen3.6-flash`)
 - `LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS` (default: `16000`)
 - `LAZY_READER_PROBLEM_SOLVER_TEMPERATURE` (default: `0.12`)
 - `LAZY_READER_OPENROUTER_API_KEY` (required unless `services.lazy-reader.openRouterApiKeyFile` is set)
@@ -426,7 +465,7 @@ Optional runtime tuning vars for the OpenRouter ask script:
 
 Current defaults in `scripts/ask-openrouter.sh` are fixed to:
 
-- model: `x-ai/grok-4.1-fast` (configurable via `LAZY_READER_ASK_MODEL`)
+- model: `qwen/qwen3.6-flash` (configurable via `LAZY_READER_ASK_MODEL`)
 - max tokens: `12000` (configurable via `LAZY_READER_ASK_MAX_TOKENS`)
 - temperature: `0.2` (configurable via `LAZY_READER_ASK_TEMPERATURE`)
 
@@ -491,7 +530,7 @@ services.lazy-reader = {
 
 Optional runtime tuning vars for the OpenRouter teach script:
 
-- `LAZY_READER_TEACH_MODEL` — override the model (default: `x-ai/grok-4.1-fast`)
+- `LAZY_READER_TEACH_MODEL` — override the model (default: `qwen/qwen3.7-plus`)
 - `LAZY_READER_TEACH_MAX_TOKENS` — override max tokens (default: `18000`)
 - `LAZY_READER_TEACH_TEMPERATURE` — override temperature (default: `0.2`)
 

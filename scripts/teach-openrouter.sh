@@ -5,7 +5,7 @@ set -o pipefail
 # Reads a page of programming book text from stdin and prints an ELI5
 # spoken explanation to stdout.
 input="$(cat)"
-model="${LAZY_READER_TEACH_MODEL:-x-ai/grok-4.1-fast}"
+model="${LAZY_READER_TEACH_MODEL:-qwen/qwen3.7-plus}"
 max_tokens="${LAZY_READER_TEACH_MAX_TOKENS:-18000}"
 temperature="${LAZY_READER_TEACH_TEMPERATURE:-0.2}"
 
