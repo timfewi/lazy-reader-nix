@@ -79,6 +79,7 @@ let
 in
 pkgs.writeShellApplication {
   name = "lazy-reader-bind-gnome";
+  excludeShellChecks = [ "SC2050" ];
   runtimeInputs = with pkgs; [
     coreutils
     glib
