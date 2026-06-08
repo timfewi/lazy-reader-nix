@@ -72,9 +72,10 @@
     type = lib.types.enum [
       "mpv"
       "ffplay"
+      "aplay"
     ];
     default = "mpv";
-    description = "Local player used to play generated speech audio.";
+    description = "Local player used to play generated speech audio. aplay starts faster (~10ms) but only supports WAV/PCM.";
   };
 
   maxChars = lib.mkOption {

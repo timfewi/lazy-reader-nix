@@ -143,25 +143,15 @@ start_reading() {
 speak_generated_text() {
 	local text="$1"
 	local started_message="$2"
-	local chunk
-	local chunk_index=0
 
-	while IFS= read -r -d '' chunk; do
-		if ((chunk_index == 0)); then
-			speak_text "$chunk" "$started_message"
-		else
-			speak_text "$chunk" ""
-		fi
-		((chunk_index += 1))
-	done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
+	# Send all text in a single TTS call — OpenRouter handles arbitrary length.
+	speak_text "$text" "$started_message"
 }
 
 speak_reading_section() {
 	local section_kind="$1"
 	local section_text="$2"
 	local started_message="$3"
-	local chunk
-	local chunk_index=0
 
 	if [[ "$section_kind" == "code" ]]; then
 		if [[ -n "$EXPLAIN_CMD" ]]; then
@@ -177,14 +167,8 @@ speak_reading_section() {
 		fi
 	fi
 
-	while IFS= read -r -d '' chunk; do
-		if ((chunk_index == 0)); then
-			speak_text "$chunk" "$started_message"
-		else
-			speak_text "$chunk" ""
-		fi
-		((chunk_index += 1))
-	done < <(chunk_text_for_reading "$section_text" "$MAX_CHARS")
+	# prose — send full section in a single TTS call
+	speak_text "$section_text" "$started_message"
 }
 
 narrate_selection() {

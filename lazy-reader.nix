@@ -8,7 +8,14 @@ let
   cfg = config.services.lazy-reader;
   lazyReaderScript = import ./nix/script.nix { inherit cfg pkgs lib; };
   lazyReaderSetTtsScript = import ./nix/set-tts-script.nix { inherit pkgs; };
-  lazyReaderBindScript = import ./nix/bind-script.nix { inherit cfg pkgs lib; };
+  lazyReaderBindScript = import ./nix/bind-script.nix {
+    inherit
+      cfg
+      pkgs
+      lib
+      lazyReaderScript
+      ;
+  };
 in
 {
   options.services.lazy-reader = import ./nix/options.nix { inherit lib; };
@@ -30,7 +37,8 @@ in
       lazyReaderSetTtsScript
     ];
 
-    systemd.user.services.lazy-reader-bind-gnome =
-      import ./nix/service.nix { inherit lazyReaderBindScript lib cfg; };
+    systemd.user.services.lazy-reader-bind-gnome = import ./nix/service.nix {
+      inherit lazyReaderBindScript lib cfg;
+    };
   };
 }

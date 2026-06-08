@@ -2,6 +2,7 @@
   cfg,
   pkgs,
   lib,
+  lazyReaderScript,
 }:
 let
   # Generate shell code to register a single GNOME custom keybinding.
@@ -19,7 +20,7 @@ let
       keyPath = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader${
         lib.optionalString (commandSuffix != "") "-${commandSuffix}"
       }/";
-      fullCommand = "${pkgs.zsh}/bin/zsh -lc ''source ~/.zshrc 2>/dev/null || true; exec /run/current-system/sw/bin/lazy-reader ${commandSuffix}''";
+      fullCommand = "${pkgs.bash}/bin/bash -c 'exec ${lazyReaderScript}/bin/lazy-reader ${commandSuffix}'";
     in
     ''
         ${preHook}

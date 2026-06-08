@@ -29,6 +29,7 @@ pkgs.writeShellApplication {
   # the value is a shell command string executed later via bash -lc, not expanded at assignment.
   excludeShellChecks = [ "SC2016" ];
   runtimeInputs = with pkgs; [
+    alsa-utils
     bash
     coreutils
     curl
@@ -51,7 +52,9 @@ pkgs.writeShellApplication {
     export LAZY_READER_PLAYER="${cfg.audioPlayer}"
     export LAZY_READER_SPEED="''${LAZY_READER_SPEED:-${toString cfg.speed}}"
     export LAZY_READER_PLAYBACK_SPEED="''${LAZY_READER_PLAYBACK_SPEED:-${toString cfg.playbackSpeed}}"
-    export LAZY_READER_OPENROUTER_SPEED="''${LAZY_READER_OPENROUTER_SPEED:-${lib.optionalString (cfg.openRouterSpeed != null) (toString cfg.openRouterSpeed)}}"
+    export LAZY_READER_OPENROUTER_SPEED="''${LAZY_READER_OPENROUTER_SPEED:-${
+      lib.optionalString (cfg.openRouterSpeed != null) (toString cfg.openRouterSpeed)
+    }}"
     export LAZY_READER_OPENROUTER_RESPONSE_FORMAT="''${LAZY_READER_OPENROUTER_RESPONSE_FORMAT:-${cfg.openRouterResponseFormat}}"
     export LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS="''${LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS:-${toString cfg.generatedSpeechChunkMaxChars}}"
     export LAZY_READER_OPENROUTER_API_KEY_FILE="''${LAZY_READER_OPENROUTER_API_KEY_FILE:-${cfg.openRouterApiKeyFile or ""}}"

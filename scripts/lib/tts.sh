@@ -251,33 +251,26 @@ _speak_openrouter() {
 		--arg speed "$OPENROUTER_SPEED" \
 		'{model: $model, input: $input, voice: $voice, response_format: $response_format} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
 
-	local response_file
-	response_file="$(mktemp --suffix=".${response_format}")"
-	local curl_status=0
-	local http_status
-
-	http_status="$(curl --fail-with-body --silent --show-error --write-out '%{http_code}' https://openrouter.ai/api/v1/audio/speech \
-		-H "Authorization: Bearer $api_key" \
-		-H "Content-Type: application/json" \
-		-d "$payload" \
-		-o "$response_file")" || curl_status=$?
-
-	if ((curl_status != 0)); then
-		local error_detail
-		error_detail=""
-		if [[ -s "$response_file" ]]; then
-			error_detail="$(tr '\n' ' ' <"$response_file" | head -c 240)"
+	# Pipe curl output directly to the audio player — no temp file.
+	# PCM → aplay (near-instant startup, ~10ms). MP3 → mpv (decoder needed).
+	if [[ "$response_format" == "pcm" ]]; then
+		if ! curl --fail-with-body --silent --show-error \
+			https://openrouter.ai/api/v1/audio/speech \
+			-H "Authorization: Bearer $api_key" \
+			-H "Content-Type: application/json" \
+			-d "$payload" | aplay -r 24000 -f S16_LE -c 1 -t raw -; then
+			notify "OpenRouter TTS request failed."
+			exit 1
 		fi
-		if [[ -n "$error_detail" ]]; then
-			notify "OpenRouter TTS request failed (HTTP ${http_status:-000}): $error_detail"
-		else
-			notify "OpenRouter TTS request failed (HTTP ${http_status:-000}, curl exit $curl_status)."
+	else
+		if ! curl --fail-with-body --silent --show-error \
+			https://openrouter.ai/api/v1/audio/speech \
+			-H "Authorization: Bearer $api_key" \
+			-H "Content-Type: application/json" \
+			-d "$payload" | mpv --no-terminal --really-quiet --audio-display=no \
+			--speed="$PLAYBACK_SPEED" -; then
+			notify "OpenRouter TTS request failed."
+			exit 1
 		fi
-		exit 1
-	fi
-
-	if ! play_audio "$response_file" "$response_format"; then
-		notify "Audio playback failed with player '$PLAYER'."
-		exit 1
 	fi
 }

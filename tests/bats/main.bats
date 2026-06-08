@@ -133,10 +133,10 @@ run_lr() {
   [ "$status" -eq 0 ]
   run bash -c "grep -c '^--chunk--$' '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" -eq 3 ]
+  [ "$output" -eq 1 ]
   run bash -c "head -n 1 '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" = "First sentence." ]
+  [ "$output" = "First sentence. Second sentence. Third sentence." ]
 }
 
 @test "start: reads piped stdin when --stdin is provided" {
@@ -310,10 +310,10 @@ run_lr() {
   [ "$status" -eq 0 ]
   run bash -c "grep -c '^--chunk--$' '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" -gt 1 ]
+  [ "$output" -eq 1 ]
   run bash -c "head -n 1 '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" = "First generated" ]
+  [ "$output" = "First generated sentence. Second generated sentence." ]
 }
 
 @test "narrate: exits 0 and stops reading when already running" {
