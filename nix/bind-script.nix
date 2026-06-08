@@ -20,7 +20,7 @@ let
       keyPath = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/lazy-reader${
         lib.optionalString (commandSuffix != "") "-${commandSuffix}"
       }/";
-      fullCommand = "${pkgs.bash}/bin/bash -c 'exec ${lazyReaderScript}/bin/lazy-reader ${commandSuffix}'";
+      fullCommand = "${pkgs.bash}/bin/bash -c \"exec ${lazyReaderScript}/bin/lazy-reader ${commandSuffix}\"";
     in
     ''
         ${preHook}
