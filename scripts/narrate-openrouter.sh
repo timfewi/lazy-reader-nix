@@ -4,7 +4,7 @@ set -o pipefail
 # OpenRouter narrate command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a faithful spoken rendering to stdout.
 input="$(cat)"
-model="${LAZY_READER_NARRATE_MODEL:-qwen/qwen3.6-flash}"
+model="${LAZY_READER_NARRATE_MODEL:-openai/gpt-oss-safeguard-20b}"
 max_tokens="${LAZY_READER_NARRATE_MAX_TOKENS:-32000}"
 temperature="${LAZY_READER_NARRATE_TEMPERATURE:-0.12}"
 

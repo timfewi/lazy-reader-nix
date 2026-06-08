@@ -4,7 +4,7 @@ set -o pipefail
 # OpenRouter summarize command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints a concise spoken summary to stdout.
 input="$(cat)"
-model="${LAZY_READER_SUMMARIZE_MODEL:-qwen/qwen3.7-plus}"
+model="${LAZY_READER_SUMMARIZE_MODEL:-openai/gpt-oss-safeguard-20b}"
 max_tokens="${LAZY_READER_SUMMARIZE_MAX_TOKENS:-32000}"
 temperature="${LAZY_READER_SUMMARIZE_TEMPERATURE:-0.12}"
 
