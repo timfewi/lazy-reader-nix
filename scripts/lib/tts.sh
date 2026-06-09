@@ -101,9 +101,11 @@ validate_config() {
 }
 
 load_tts_config() {
-	TTS_PROVIDER="${LAZY_READER_TTS_PROVIDER:-piper}"
-	TTS_MODEL="${LAZY_READER_TTS_MODEL:-tts-1}"
-	TTS_VOICE="${LAZY_READER_TTS_VOICE:-alloy}"
+	# Preserve existing values (from config.sh/env) so Nix wrapper settings aren't silently overwritten.
+	# tts.conf can still override via the while loop below.
+	TTS_PROVIDER="${TTS_PROVIDER:-${LAZY_READER_TTS_PROVIDER:-piper}}"
+	TTS_MODEL="${TTS_MODEL:-${LAZY_READER_TTS_MODEL:-tts-1}}"
+	TTS_VOICE="${TTS_VOICE:-${LAZY_READER_TTS_VOICE:-alloy}}"
 
 	local config_file="${XDG_CONFIG_HOME:-$HOME/.config}/lazy-reader/tts.conf"
 	if [[ -f "$config_file" ]]; then
@@ -251,26 +253,58 @@ _speak_openrouter() {
 		--arg speed "$OPENROUTER_SPEED" \
 		'{model: $model, input: $input, voice: $voice, response_format: $response_format} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
 
-	# Pipe curl output directly to the audio player — no temp file.
-	# PCM → aplay (near-instant startup, ~10ms). MP3 → mpv (decoder needed).
+	# Download TTS audio to temp file with timeout + retry.
+	# Temp file avoids error-body-piped-to-player noise and enables HTTP status classification.
+	# --fail-with-body omitted: http_code regex check handles non-2xx manually.
+	# Removing it avoids errexit from curl's non-zero exit inside $() with set -euo pipefail.
+	# 2>/dev/null removed: network errors produce empty http_code for actionable diagnostic.
+	local tmpfile
+	tmpfile="$(mktemp --suffix=".${response_format}")" || {
+		notify "OpenRouter TTS: failed to create temp file."
+		exit 1
+	}
+
+	local http_code
+	http_code="$(curl --max-time 60 --connect-timeout 10 --retry 2 --retry-delay 1 \
+		--write-out "%{http_code}" \
+		--silent --show-error \
+		https://openrouter.ai/api/v1/audio/speech \
+		-H "Authorization: Bearer $api_key" \
+		-H "Content-Type: application/json" \
+		-d "$payload" \
+		--output "$tmpfile")"
+
+	if ! [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+		rm -f "$tmpfile"
+		case "$http_code" in
+		401 | 403)
+			notify "OpenRouter TTS: API key rejected (HTTP $http_code). Check LAZY_READER_OPENROUTER_API_KEY."
+			;;
+		429)
+			notify "OpenRouter TTS: rate limited (HTTP 429). Wait and try again."
+			;;
+		5*)
+			notify "OpenRouter TTS: server error (HTTP $http_code). Try again later."
+			;;
+		*)
+			notify "OpenRouter TTS request failed (HTTP $http_code)."
+			;;
+		esac
+		exit 1
+	fi
+
 	if [[ "$response_format" == "pcm" ]]; then
-		if ! curl --fail-with-body --silent --show-error \
-			https://openrouter.ai/api/v1/audio/speech \
-			-H "Authorization: Bearer $api_key" \
-			-H "Content-Type: application/json" \
-			-d "$payload" | aplay -r 24000 -f S16_LE -c 1 -t raw -; then
-			notify "OpenRouter TTS request failed."
+		if ! aplay -r 24000 -f S16_LE -c 1 -t raw "$tmpfile"; then
+			notify "Audio playback failed."
+			rm -f "$tmpfile"
 			exit 1
 		fi
 	else
-		if ! curl --fail-with-body --silent --show-error \
-			https://openrouter.ai/api/v1/audio/speech \
-			-H "Authorization: Bearer $api_key" \
-			-H "Content-Type: application/json" \
-			-d "$payload" | mpv --no-terminal --really-quiet --audio-display=no \
-			--speed="$PLAYBACK_SPEED" -; then
-			notify "OpenRouter TTS request failed."
+		if ! mpv --no-terminal --really-quiet --audio-display=no --speed="$PLAYBACK_SPEED" "$tmpfile"; then
+			notify "Audio playback failed."
+			rm -f "$tmpfile"
 			exit 1
 		fi
 	fi
+	rm -f "$tmpfile"
 }

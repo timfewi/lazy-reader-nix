@@ -61,19 +61,19 @@ pkgs.writeShellApplication {
     export LAZY_READER_TTS_PROVIDER="${cfg.ttsProvider}"
     export LAZY_READER_TTS_MODEL="${cfg.ttsModel}"
     export LAZY_READER_TTS_VOICE="${cfg.ttsVoice}"
-    export LAZY_READER_NARRATE_CMD=''${LAZY_READER_NARRATE_CMD:-${lib.escapeShellArg cfg.narrateCommand}}
+    export LAZY_READER_NARRATE_CMD="''${LAZY_READER_NARRATE_CMD:-${lib.escapeShellArg cfg.narrateCommand}}"
     export LAZY_READER_NARRATE_INPUT_MAX_CHARS="''${LAZY_READER_NARRATE_INPUT_MAX_CHARS:-${toString cfg.narrateInputMaxChars}}"
     export LAZY_READER_NARRATE_MAX_CHARS="''${LAZY_READER_NARRATE_MAX_CHARS:-${toString cfg.narrateMaxChars}}"
-    export LAZY_READER_EXPLAIN_CMD=''${LAZY_READER_EXPLAIN_CMD:-${lib.escapeShellArg cfg.explainCommand}}
+    export LAZY_READER_EXPLAIN_CMD="''${LAZY_READER_EXPLAIN_CMD:-${lib.escapeShellArg cfg.explainCommand}}"
     export LAZY_READER_EXPLAIN_MAX_CHARS="''${LAZY_READER_EXPLAIN_MAX_CHARS:-${toString cfg.explainMaxChars}}"
-    export LAZY_READER_SUMMARIZE_CMD=''${LAZY_READER_SUMMARIZE_CMD:-${lib.escapeShellArg cfg.summarizeCommand}}
+    export LAZY_READER_SUMMARIZE_CMD="''${LAZY_READER_SUMMARIZE_CMD:-${lib.escapeShellArg cfg.summarizeCommand}}"
     export LAZY_READER_SUMMARIZE_MAX_CHARS="''${LAZY_READER_SUMMARIZE_MAX_CHARS:-${toString cfg.summarizeMaxChars}}"
     export LAZY_READER_SUMMARIZE_INPUT_MAX_CHARS="''${LAZY_READER_SUMMARIZE_INPUT_MAX_CHARS:-${toString cfg.summarizeInputMaxChars}}"
-    export LAZY_READER_PROBLEM_SOLVER_CMD=''${LAZY_READER_PROBLEM_SOLVER_CMD:-${lib.escapeShellArg cfg.problemSolverCommand}}
+    export LAZY_READER_PROBLEM_SOLVER_CMD="''${LAZY_READER_PROBLEM_SOLVER_CMD:-${lib.escapeShellArg cfg.problemSolverCommand}}"
     export LAZY_READER_PROBLEM_SOLVER_MAX_CHARS="''${LAZY_READER_PROBLEM_SOLVER_MAX_CHARS:-${toString cfg.problemSolverMaxChars}}"
-    export LAZY_READER_ASK_CMD=''${LAZY_READER_ASK_CMD:-${lib.escapeShellArg cfg.askCommand}}
+    export LAZY_READER_ASK_CMD="''${LAZY_READER_ASK_CMD:-${lib.escapeShellArg cfg.askCommand}}"
     export LAZY_READER_ASK_MAX_CHARS="''${LAZY_READER_ASK_MAX_CHARS:-${toString cfg.askMaxChars}}"
-    export LAZY_READER_TEACH_CMD=''${LAZY_READER_TEACH_CMD:-${lib.escapeShellArg cfg.teachCommand}}
+    export LAZY_READER_TEACH_CMD="''${LAZY_READER_TEACH_CMD:-${lib.escapeShellArg cfg.teachCommand}}"
     export LAZY_READER_TEACH_MAX_CHARS="''${LAZY_READER_TEACH_MAX_CHARS:-${toString cfg.teachMaxChars}}"
     export LAZY_READER_TEACH_INPUT_MAX_CHARS="''${LAZY_READER_TEACH_INPUT_MAX_CHARS:-${toString cfg.teachInputMaxChars}}"
     exec ${pkgs.bash}/bin/bash ${../scripts}/lazy-reader.sh "$@"

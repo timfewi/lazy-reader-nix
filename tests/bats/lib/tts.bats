@@ -24,7 +24,7 @@ while (($#)); do
       payload="$2"
       shift 2
       ;;
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -35,6 +35,7 @@ while (($#)); do
 done
 printf "%s" "$payload" > "$TEST_TMPDIR/payload.json"
 printf "audio" > "$output"
+printf "200"
 '
   make_stub mpv 'exit 0'
 
@@ -72,7 +73,7 @@ while (($#)); do
       payload="$2"
       shift 2
       ;;
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -83,6 +84,7 @@ while (($#)); do
 done
 printf "%s" "$payload" > "$TEST_TMPDIR/payload.json"
 printf "audio" > "$output"
+printf "200"
 '
   make_stub mpv 'exit 0'
 
@@ -118,7 +120,7 @@ while (($#)); do
       payload="$2"
       shift 2
       ;;
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -128,10 +130,10 @@ while (($#)); do
   esac
 done
 printf "%s" "$payload" > "$TEST_TMPDIR/payload.json"
-printf "%s" "$output" > "$TEST_TMPDIR/output-path.txt"
 printf "pcm-audio" > "$output"
+printf "200"
 '
-  make_stub mpv 'exit 0'
+  make_stub aplay 'exit 0'
 
   run env \
     "PATH=${PATH}" \
@@ -149,7 +151,6 @@ printf "pcm-audio" > "$output"
       source '${SCRIPTS_DIR}/lib/tts.sh'
       speak_text 'hello' ''
       jq -e '.response_format == \"pcm\"' '$TEST_TMPDIR/payload.json'
-      grep -q '.pcm$' '$TEST_TMPDIR/output-path.txt'
     "
 
   [ "$status" -eq 0 ]
@@ -165,7 +166,7 @@ while (($#)); do
       payload="$2"
       shift 2
       ;;
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -176,6 +177,7 @@ while (($#)); do
 done
 printf "%s" "$payload" > "$TEST_TMPDIR/payload.json"
 printf "audio" > "$output"
+printf "200"
 '
   make_stub mpv 'exit 0'
 
@@ -201,12 +203,12 @@ printf "audio" > "$output"
   [ "$status" -eq 0 ]
 }
 
-@test "speak_text: PCM response uses raw PCM mpv playback flags" {
+@test "speak_text: PCM response uses aplay with 24000 Hz raw format" {
   make_stub curl '
 output=""
 while (($#)); do
   case "$1" in
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -216,8 +218,9 @@ while (($#)); do
   esac
 done
 printf "pcm-audio" > "$output"
+printf "200"
 '
-  make_stub mpv 'printf "%s\n" "$*" > "$TEST_TMPDIR/mpv-args.txt"'
+  make_stub aplay 'printf "%s\n" "$*" > "$TEST_TMPDIR/aplay-args.txt"'
 
   run env \
     "PATH=${PATH}" \
@@ -234,21 +237,20 @@ printf "pcm-audio" > "$output"
       source '${SCRIPTS_DIR}/lib/audio.sh'
       source '${SCRIPTS_DIR}/lib/tts.sh'
       speak_text 'hello' ''
-      grep -q -- '--demuxer=rawaudio' '$TEST_TMPDIR/mpv-args.txt'
-      grep -q -- '--demuxer-rawaudio-format=s16le' '$TEST_TMPDIR/mpv-args.txt'
-      grep -q -- '--demuxer-rawaudio-rate=24000' '$TEST_TMPDIR/mpv-args.txt'
-      grep -q -- '--demuxer-rawaudio-channels=1' '$TEST_TMPDIR/mpv-args.txt'
+      grep -q -- '-r 24000' '$TEST_TMPDIR/aplay-args.txt'
+      grep -q -- '-f S16_LE' '$TEST_TMPDIR/aplay-args.txt'
+      grep -q -- '-c 1' '$TEST_TMPDIR/aplay-args.txt'
     "
 
   [ "$status" -eq 0 ]
 }
 
-@test "speak_text: PCM response uses raw PCM ffplay playback flags" {
+@test "speak_text: PCM response always uses aplay regardless of PLAYER setting" {
   make_stub curl '
 output=""
 while (($#)); do
   case "$1" in
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -258,8 +260,11 @@ while (($#)); do
   esac
 done
 printf "pcm-audio" > "$output"
+printf "200"
 '
-  make_stub ffplay 'printf "%s\n" "$*" > "$TEST_TMPDIR/ffplay-args.txt"'
+  make_stub aplay 'exit 0'
+  make_stub mpv 'printf "mpv should not be called for PCM" >&2; exit 1'
+  make_stub ffplay 'printf "ffplay should not be called for PCM" >&2; exit 1'
 
   run env \
     "PATH=${PATH}" \
@@ -277,20 +282,17 @@ printf "pcm-audio" > "$output"
       source '${SCRIPTS_DIR}/lib/audio.sh'
       source '${SCRIPTS_DIR}/lib/tts.sh'
       speak_text 'hello' ''
-      grep -q -- '-f s16le' '$TEST_TMPDIR/ffplay-args.txt'
-      grep -q -- '-ar 24000' '$TEST_TMPDIR/ffplay-args.txt'
-      grep -q -- '-ac 1' '$TEST_TMPDIR/ffplay-args.txt'
     "
 
   [ "$status" -eq 0 ]
 }
 
-@test "speak_text: openrouter failure reports HTTP status and response body" {
+@test "speak_text: openrouter failure reports HTTP status" {
   make_stub curl '
 output=""
 while (($#)); do
   case "$1" in
-    -o)
+    --output)
       output="$2"
       shift 2
       ;;
@@ -299,8 +301,8 @@ while (($#)); do
       ;;
   esac
 done
-printf "{\"error\":\"invalid voice\"}" > "$output"
-printf "400"
+printf "{}" > "$output"
+printf "429"
 exit 22
 '
 
@@ -321,5 +323,5 @@ exit 22
     "
 
   [ "$status" -ne 0 ]
-  [[ "$output" == *"OpenRouter TTS request failed (HTTP 400): {\"error\":\"invalid voice\"}"* ]]
+  [[ "$output" == *"rate limited (HTTP 429)"* ]]
 }

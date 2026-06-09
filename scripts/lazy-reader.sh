@@ -306,7 +306,24 @@ main() {
 		;;
 	esac
 
-	echo "$$" >"$PID_FILE"
+	# Atomic PID file claim — prevents two readers starting simultaneously (TOCTOU race).
+	if ! (
+		set -o noclobber
+		echo "$$" >"$PID_FILE"
+	) 2>/dev/null; then
+		if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
+			notify "Already reading. Press shortcut to stop."
+			exit 0
+		fi
+		# Stale PID from dead process — atomic overwrite (prevents second claimer).
+		if ! (
+			set -o noclobber
+			echo "$$" >"$PID_FILE"
+		) 2>/dev/null; then
+			notify "Already reading. Press shortcut to stop."
+			exit 0
+		fi
+	fi
 	OWNS_PID_FILE="1"
 	trap cleanup EXIT INT TERM
 

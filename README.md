@@ -29,8 +29,6 @@ You select text
 ┌─────────────────────────────────────────────┐
 │ 3. lazy-reader.sh receives rewritten text   │
 │    Trims to NARRATE_MAX_CHARS (24k chars)   │
-│    Chunks into GENERATED_SPEECH_CHUNK_MAX   │
-│    _CHARS (14k chars) segments              │
 └──────────────────┬──────────────────────────┘
                    │ each chunk
                    ▼
