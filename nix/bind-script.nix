@@ -60,7 +60,7 @@ let
     { gsettingsPath, value }:
     ''
         current="$(${pkgs.glib.bin}/bin/gsettings get ${gsettingsPath})"
-        updated="$(${pkgs.python3}/bin/python3 - "$current" <<'PY'
+        updated="$(${pkgs.python3}/bin/python3 - "$current" "${value}" <<'PY'
       import ast, sys
       raw = sys.argv[1].strip()
       if raw.startswith("@as"):
@@ -72,7 +72,6 @@ let
       data = [item for item in data if item != sys.argv[2]]
       print("[" + ", ".join(repr(item) for item in data) + "]")
       PY
-          "${value}"
         )"
         ${pkgs.glib.bin}/bin/gsettings set ${gsettingsPath} "$updated" || true
     '';
