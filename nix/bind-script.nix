@@ -138,5 +138,15 @@ pkgs.writeShellApplication {
       commandSuffix = "teach";
       shortcut = cfg.gnomeTeachShortcut;
     })}
+
+    ${lib.optionalString cfg.enableMasterInGnome (mkBinding {
+      name = "Lazy Reader Master";
+      commandSuffix = "master";
+      shortcut = cfg.gnomeMasterShortcut;
+      preHook = lib.optionalString cfg.clearDefaultSuperMInGnome (removeFromArray {
+        gsettingsPath = "org.gnome.desktop.wm.keybindings switch-to-workspace-last";
+        value = "<Super>m";
+      });
+    })}
   '';
 }

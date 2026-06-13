@@ -317,6 +317,47 @@
     description = "GNOME keybinding string used to trigger teach mode (default: Super+T).";
   };
 
+  masterCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = ''
+      Shell command that receives clipboard text on stdin and prints a senior-wise-expert
+      summary to stdout. The default implementation sends clipboard text to an external
+      LLM API for summarization. Do not use with passwords, secrets, or sensitive PII.
+      Leave empty to disable master mode.
+    '';
+  };
+
+  masterMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 32000;
+    description = "Maximum characters of masterCommand output passed to TTS.";
+  };
+
+  masterInputMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 60000;
+    description = "Maximum clipboard characters sent to masterCommand before backend processing.";
+  };
+
+  enableMasterInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader master.";
+  };
+
+  gnomeMasterShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>m";
+    description = "GNOME keybinding string used to trigger master mode (default: Super+M).";
+  };
+
+  clearDefaultSuperMInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Clear Super+M from GNOME default bindings to avoid shortcut conflict.";
+  };
+
   ttsProvider = lib.mkOption {
     type = lib.types.enum [
       "piper"

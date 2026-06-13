@@ -87,6 +87,16 @@ validate_config() {
 		exit 1
 	fi
 
+	if ! [[ "$MASTER_MAX_CHARS" =~ ^[0-9]+$ ]] || ((MASTER_MAX_CHARS <= 0)); then
+		notify "Invalid master max chars '$MASTER_MAX_CHARS'. Use a positive integer."
+		exit 1
+	fi
+
+	if ! [[ "$MASTER_INPUT_MAX_CHARS" =~ ^[0-9]+$ ]] || ((MASTER_INPUT_MAX_CHARS <= 0)); then
+		notify "Invalid master input max chars '$MASTER_INPUT_MAX_CHARS'. Use a positive integer."
+		exit 1
+	fi
+
 	if [[ "${TTS_PROVIDER:-piper}" == "piper" ]]; then
 		if [[ ! -f "$MODEL" ]]; then
 			notify "Piper model not found at '$MODEL'. Set services.lazy-reader.model to a valid .onnx file path."

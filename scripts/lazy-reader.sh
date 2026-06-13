@@ -29,12 +29,14 @@ source "${_DIR}/lib/solver.sh"
 source "${_DIR}/lib/asker.sh"
 # shellcheck source=scripts/lib/teacher.sh
 source "${_DIR}/lib/teacher.sh"
+# shellcheck source=scripts/lib/master.sh
+source "${_DIR}/lib/master.sh"
 
 INPUT_SOURCE="selection"
 MODE="toggle"
 
 usage() {
-	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach]"
+	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master]"
 }
 
 parse_args() {
@@ -62,7 +64,7 @@ parse_args() {
 			usage
 			exit 0
 			;;
-		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach)
+		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach | master)
 			if ((has_mode)); then
 				printf '%s\n' "error: multiple commands provided" >&2
 				return 1
@@ -79,7 +81,7 @@ parse_args() {
 	done
 
 	case "$INPUT_SOURCE" in
-	selection | stdin)
+	selection | stdin | clipboard)
 		;;
 	*)
 		printf '%s\n' "error: unsupported input source: $INPUT_SOURCE" >&2
@@ -102,9 +104,10 @@ missing_input_message() {
 require_input_text() {
 	local selection_message="$1"
 	local max_chars="${2:-}"
+	local input_source="${3:-${INPUT_SOURCE:-selection}}"
 	local text
 
-	if ! text="$(read_input_text "$INPUT_SOURCE")"; then
+	if ! text="$(read_input_text "$input_source")"; then
 		notify "$(missing_input_message "$selection_message")"
 		exit 1
 	fi
@@ -260,6 +263,29 @@ teach_selection() {
 	speak_generated_text "$taught_text" "Reading explanation..."
 }
 
+master_selection() {
+	validate_config
+
+	notify "Reading clipboard for expert summarization..."
+
+	local text
+	text="$(require_input_text "No text in clipboard. Copy text first, then press Super+M." "$MASTER_INPUT_MAX_CHARS" "clipboard")"
+
+	local clip_len
+	clip_len="$(printf '%s' "$text" | wc -c)"
+	if ! zenity --question --title="Lazy Reader Master" \
+		--text="Send ${clip_len} characters from clipboard to OpenRouter for expert summarization?\n\nWARNING: Do not send passwords, API keys, or sensitive personal data." \
+		--ok-label="Send" --cancel-label="Cancel" 2>/dev/null; then
+		notify "Master summarization cancelled."
+		exit 0
+	fi
+
+	local master_text
+	master_text="$(run_master "$text")"
+
+	speak_generated_text "$master_text" "Master summary..."
+}
+
 main() {
 	mkdir -p "$RUNTIME_DIR"
 	cleanup_stale_pid_file
@@ -294,7 +320,7 @@ main() {
 		fi
 		exit 0
 		;;
-	explain | summarize | narrate | solve | ask | teach)
+	explain | summarize | narrate | solve | ask | teach | master)
 		if is_running; then
 			stop_running_reader
 			exit 0
@@ -334,6 +360,7 @@ main() {
 	solve) solve_selection ;;
 	ask) ask_selection ;;
 	teach) teach_selection ;;
+	master) master_selection ;;
 	*) start_reading ;;
 	esac
 }

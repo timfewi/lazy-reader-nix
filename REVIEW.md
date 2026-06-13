@@ -1,227 +1,186 @@
 ---
 phase: current
-reviewed: 2026-06-09T21:10:00Z
+reviewed: 2026-06-13T00:00:00Z
 depth: standard
 files_reviewed: 8
 files_reviewed_list:
-  - README.md
-  - docs/tts-providers.md
-  - nix/bind-script.nix
-  - nix/script.nix
+  - scripts/master-openrouter.sh
+  - scripts/lib/master.sh
   - scripts/lazy-reader.sh
-  - scripts/lib/narrator.sh
-  - scripts/lib/tts.sh
-  - tests/bats/lib/tts.bats
+  - scripts/lib/selection.sh
+  - scripts/lib/config.sh
+  - nix/options.nix
+  - nix/script.nix
+  - nix/bind-script.nix
+  - modules/voice-tools.nix
 findings:
-  critical: 1
-  warning: 2
+  critical: 2
+  warning: 6
   info: 3
-  total: 6
+  total: 11
 status: issues_found
 ---
 
 # Code Review Report
 
-**Reviewed:** 2026-06-09T21:10:00Z
+**Reviewed:** 2026-06-13
 **Depth:** standard
-**Files Reviewed:** 8
+**Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-This commit fixes 4 bugs (OpenRouter TTS error body piped to player, PID file TOCTOU race, Nix wrapper quoting, TTS config re-read overwrite) and updates 7 tests plus documentation. The four intended fixes are **mostly correct** with one critical regression:
-
-1. **OpenRouter TTS** — temp file + `--max-time`/`--retry` + HTTP status classification is correct in spirit, but **`--fail-with-body` triggers `set -e` before error handling code can execute** (CRITICAL).
-2. **PID file** — noclobber atomic write is correct. Edge case: stale PID overwrite reverts to non-atomic write (acceptable, rare path).
-3. **Nix wrapper** — single-quote→double-quote fix is correct; bash variable expansion now works.
-4. **TTS defaults** — `load_tts_config()` now preserves existing values. Correct.
-
-Test coverage is adequate for the happy path but has gaps in error handling (only 429 tested, missing 401/403/5xx/network failure).
-
----
+Master mode is wired end-to-end (options, wrapper, binding, lazy-reader dispatch, and the OpenRouter helper), but it ships with one Nix evaluation bug that breaks the default module configuration and several robustness/consistency gaps in bash key handling, diagnostics, and shortcut clearing.
 
 ## Critical Issues
 
-### CR-01: `--fail-with-body` causes premature `set -e` abort on HTTP error (OpenRouter TTS)
+### CR-01: `nix/script.nix` fails Nix evaluation when `openRouterApiKeyFile` is unset
 
-**File:** `scripts/lib/tts.sh:262-270`
-**Issue:** The curl invocation uses `--fail-with-body`, which causes curl to exit with code 22 on any HTTP 4xx/5xx response. The command substitution `http_code="$(curl ...)"` propagates this non-zero exit from the subshell. Because `lazy-reader.sh` runs with `set -e` (line 2), the whole script aborts _before_ the HTTP status classification at line 272 is ever reached. Users see no notification — the process silently dies.
+**File:** `nix/script.nix:60`
+**Issue:** `${cfg.openRouterApiKeyFile or ""}` does **not** fall back to `""` when the option value is `null`; `or` only substitutes a missing attribute. Because `openRouterApiKeyFile` defaults to `null`, enabling `services.lazy-reader` without setting the key file causes `cannot coerce null to a string` during evaluation. This is a hard build error for the default config.
 
-The error handling block (lines 272-288) is dead code in production because `set -e` kills the process first. The tests pass only because they invoke lib functions directly under `bash -c` without `set -e`, masking this bug.
+**Fix:** Use `lib.optionalString` to skip the interpolation when the option is `null`:
 
-**Fix:** Remove `--fail-with-body` from the curl arguments. The manual `http_code` check at line 272 already handles non-2xx responses. Without `--fail-with-body`, curl treats 4xx/5xx as valid HTTP transactions and exits 0, keeping the error classification code reachable.
-
-```diff
--	http_code="$(curl --max-time 60 --connect-timeout 10 --retry 2 --retry-delay 1 \
--		--write-out "%{http_code}" \
--		--silent --show-error \
--		--fail-with-body \
--		https://openrouter.ai/api/v1/audio/speech \
--		-H "Authorization: Bearer $api_key" \
--		-H "Content-Type: application/json" \
--		-d "$payload" \
--		--output "$tmpfile" 2>/dev/null)"
-+	http_code="$(curl --max-time 60 --connect-timeout 10 --retry 2 --retry-delay 1 \
-+		--write-out "%{http_code}" \
-+		--silent --show-error \
-+		https://openrouter.ai/api/v1/audio/speech \
-+		-H "Authorization: Bearer $api_key" \
-+		-H "Content-Type: application/json" \
-+		-d "$payload" \
-+		--output "$tmpfile" 2>/dev/null)"
+```nix
+export LAZY_READER_OPENROUTER_API_KEY_FILE="''${LAZY_READER_OPENROUTER_API_KEY_FILE:-${
+  lib.optionalString (cfg.openRouterApiKeyFile != null) cfg.openRouterApiKeyFile
+}}"
 ```
 
----
+### CR-02: OpenRouter API key file is read without trimming trailing whitespace
+
+**File:** `scripts/lib/config.sh:26`, `scripts/lib/tts.sh:233`
+**Issue:** Both code paths read the key file with `$(<...)` / `cat`. If the secret file ends with a newline (common for files created with `echo` or editors), the exported/used key contains `\n`. The `Authorization: Bearer ...` header then includes a newline, which either corrupts the HTTP request or causes OpenRouter to reject every request in all OpenRouter-backed modes (explain, ask, master, TTS).
+
+**Fix:** Trim whitespace after reading:
+
+```bash
+# scripts/lib/config.sh:26
+key="$(<"$openrouter_api_key_file")"
+export LAZY_READER_OPENROUTER_API_KEY="${key%$'\n'}"
+```
+
+```bash
+# scripts/lib/tts.sh:233
+api_key="$(cat "$LAZY_READER_OPENROUTER_API_KEY_FILE")"
+api_key="${api_key%$'\n'}"
+```
 
 ## Warnings
 
-### WR-01: Response body discarded on HTTP error
+### WR-01: Master command discards stderr, hiding failure reasons
 
-**File:** `scripts/lib/tts.sh:273,304`
-**Issue:** When curl receives an HTTP error (4xx/5xx), the response body is written to `$tmpfile` but then immediately deleted without being read (`rm -f "$tmpfile"` at line 273). This loses the OpenRouter error message (e.g., `{"error":"invalid voice for model","details":"..."}`), which was visible in the old pipe-to-player approach.
+**File:** `scripts/lib/master.sh:12`
+**Issue:** `bash -c "$MASTER_CMD" 2>/dev/null` swallows all stderr. If `master-openrouter.sh` fails, the user gets only "Master command failed" with no actionable detail. The existing `narrator.sh` already captures stderr to a temp file and reports it.
 
-The user now gets only the HTTP status code classification ("rate limited (HTTP 429)") instead of the provider's specific error message. The 401/403/5xx cases similarly lose detail.
-
-**Fix:** Read the response body from `$tmpfile` before deleting on error and include it in the notification. Alternatively, move the temp file to a known path for diagnostics:
-
-```diff
- 	if ! [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
-+		local error_body
-+		error_body="$(<"$tmpfile")"
- 		rm -f "$tmpfile"
-+		# Truncate long error bodies to avoid notification toast overflow
-+		error_body="${error_body:0:200}"
- 		case "$http_code" in
- 		401 | 403)
--			notify "OpenRouter TTS: API key rejected (HTTP $http_code). Check LAZY_READER_OPENROUTER_API_KEY."
-+			notify "OpenRouter TTS: API key rejected (HTTP $http_code): $error_body"
- 			;;
- 		429)
--			notify "OpenRouter TTS: rate limited (HTTP 429). Wait and try again."
-+			notify "OpenRouter TTS: rate limited (HTTP 429): $error_body"
- 			;;
- 		5*)
--			notify "OpenRouter TTS: server error (HTTP $http_code). Try again later."
-+			notify "OpenRouter TTS: server error (HTTP $http_code): $error_body"
- 			;;
- 		*)
--			notify "OpenRouter TTS request failed (HTTP $http_code)."
-+			notify "OpenRouter TTS request failed (HTTP $http_code): $error_body"
- 			;;
- 		esac
-```
-
-### WR-02: Stale PID fallback reintroduces non-atomic write
-
-**File:** `scripts/lazy-reader.sh:319`
-**Issue:** The noclobber atomic write correctly prevents two processes racing for the PID file. However, the stale-PID fallback at line 319:
+**Fix:** Capture stderr like `narrator.sh`:
 
 ```bash
-echo "$$" >"$PID_FILE"
+local stderr_file
+stderr_file="$(mktemp)"
+if ! master_text="$(printf '%s' "$input_text" | bash -c "$MASTER_CMD" 2>"$stderr_file")"; then
+  local error_msg
+  error_msg="$(<"$stderr_file")"
+  rm -f "$stderr_file"
+  notify "Master command failed: ${error_msg:-check services.lazy-reader.masterCommand}"
+  exit 1
+fi
+rm -f "$stderr_file"
 ```
 
-reverts to a plain overwrite without noclobber. In the unlikely scenario where two processes both detect a stale PID simultaneously (the stored PID died, both check kill -0 at the same time, both fall through), this recreates the same TOCTOU race the noclobber fix was supposed to eliminate.
+### WR-02: OpenRouter TTS playback ignores the configured `audioPlayer`
 
-Probability is low (stale PID only occurs on crashes), but the fix is simple.
+**File:** `scripts/lib/tts.sh:297`, `scripts/lib/tts.sh:303`
+**Issue:** For MP3 responses `_speak_openrouter` always calls `mpv`; for PCM it always calls `aplay`, regardless of the `LAZY_READER_PLAYER` setting. A user who sets `audioPlayer = "ffplay"` still gets `mpv`/`aplay`.
 
-**Fix:** Use the same noclobber pattern for the stale PID overwrite:
+**Fix:** Route through `play_audio`/`play_audio_stream` with the correct format, or branch on `$PLAYER` inside `_speak_openrouter`:
 
-```diff
- 		# Stale PID from dead process — overwrite.
-+		(
-+			set -o noclobber
-+			echo "$$" >"$PID_FILE"
-+		) 2>/dev/null || {
-+			# Lost race — another process just claimed it.
-+			notify "Already reading. Press shortcut to stop."
-+			exit 0
-+		}
--		echo "$$" >"$PID_FILE"
- 	fi
+```bash
+if [[ "$response_format" == "pcm" ]]; then
+  play_audio "$tmpfile" "pcm"
+else
+  play_audio "$tmpfile"
+fi
 ```
 
----
+### WR-03: Disabling default-shortcut clearing still emits a broken `gsettings set`
+
+**File:** `nix/bind-script.nix:28`, `nix/bind-script.nix:96`, `nix/bind-script.nix:110`
+**Issue:** `clearShortcut` is produced by `lib.optionalString`, so it becomes `""` when disabled. The guard `clearShortcut != null` is therefore true even when `clearShortcut` is empty, generating `gsettings set  "[]" || true` for the default shortcuts. The `|| true` masks the failure, but it prints noise/errors and is brittle.
+
+**Fix:** Either pass `null` when disabled, or guard on a non-empty string:
+
+```nix
+${lib.optionalString (clearShortcut != null && clearShortcut != "") ''
+  if [[ "${shortcut}" == "${clearCheck}" ]]; then
+    gsettings set ${clearShortcut} "[]" || true
+  fi
+''}
+```
+
+### WR-04: `master-openrouter.sh` sends an unexplained `zdr:true` flag
+
+**File:** `scripts/master-openrouter.sh:23`
+**Issue:** The chat-completions payload includes `zdr: true`, which no other OpenRouter helper script sets. If OpenRouter rejects unknown top-level fields, master mode will fail while the other modes work. If it is intentional, it is undocumented and inconsistent.
+
+**Fix:** Remove `zdr: true` unless it is a documented, required OpenRouter parameter; if required, add a comment and use it consistently across all OpenRouter scripts.
+
+### WR-05: Master mode ignores `--input-source` and always reads clipboard
+
+**File:** `scripts/lazy-reader.sh:272`
+**Issue:** `master_selection` hardcodes `"clipboard"` as the third argument to `require_input_text`, so `--stdin` or `--input-source selection` are silently ignored for master mode. The usage line implies modes compose with input sources.
+
+**Fix:** Use `$INPUT_SOURCE` unless master is intentionally clipboard-only:
+
+```bash
+text="$(require_input_text "No text found. Copy or select text first, then press Super+M." "$MASTER_INPUT_MAX_CHARS" "$INPUT_SOURCE")"
+```
+
+If clipboard-only is by design, document it in the usage string and reject incompatible input sources explicitly.
+
+### WR-06: Master helper lacks strict bash options and numeric env validation
+
+**File:** `scripts/master-openrouter.sh:2`, `scripts/master-openrouter.sh:17-18`
+**Issue:** Only `set -o pipefail` is set, so unset-variable or other failures do not abort. More importantly, `max_tokens` and `temperature` are passed to `jq --argjson` without validation; a non-numeric `LAZY_READER_MASTER_MAX_TOKENS` causes a raw jq error instead of a friendly notification.
+
+**Fix:** Add `set -euo pipefail` and validate numbers before jq:
+
+```bash
+set -euo pipefail
+
+if ! [[ "$max_tokens" =~ ^[0-9]+$ ]]; then
+  echo "Invalid LAZY_READER_MASTER_MAX_TOKENS: $max_tokens" >&2
+  exit 1
+fi
+if ! [[ "$temperature" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  echo "Invalid LAZY_READER_MASTER_TEMPERATURE: $temperature" >&2
+  exit 1
+fi
+```
 
 ## Info
 
-### IN-01: `mktemp --suffix` is GNU coreutils-specific
+### IN-01: `masterCommand` option description is misleading
 
-**File:** `scripts/lib/tts.sh:259`
-**Issue:** `mktemp --suffix=...` is a GNU coreutils extension (not POSIX). The Nix wrapper includes `coreutils` so this is fine in production, but the script is also callable outside Nix (e.g., by sourcing it directly or running tests). If someone runs it on a BSD/macOS system, `mktemp` may reject the `--suffix` flag.
+**File:** `nix/options.nix:320-327`
+**Issue:** The description says the command "Sends clipboard text to OpenRouter API for LLM summarization", but the option is generic: any shell command that reads stdin and writes stdout works. The wording couples the option to a specific backend and input source.
 
-The `--suffix` flag is also used in `_speak_piper` at line 190 and the `ask_selection` mktemp at `lazy-reader.sh:231`, so this is a pre-existing pattern.
+**Fix:** Reword to match the generic command style used for `explainCommand`/`summarizeCommand`.
 
-**Suggestion:** Document the `coreutils` requirement or use a portable alternative (`TMPDIR`, `.XXXXX` template) if cross-platform support is desired. For this project's scope (NixOS), the risk is acceptable.
+### IN-02: Usage string omits the `clipboard` input source
 
-### IN-02: Error response body lost in test refactor
+**File:** `scripts/lazy-reader.sh:39`
+**Issue:** `parse_args` accepts `clipboard`, but the usage line only lists `selection|stdin`.
 
-**File:** `tests/bats/lib/tts.bats:290-327`
-**Issue:** The failure test was simplified from checking for the detailed response body:
+**Fix:** Update usage to `[--stdin|--input-source selection|stdin|clipboard]`.
 
-```
-# OLD:  [[ "$output" == *"OpenRouter TTS request failed (HTTP 400): {\"error\":\"invalid voice\"}"* ]]
-# NEW:  [[ "$output" == *"rate limited (HTTP 429)"* ]]
-```
+### IN-03: No Nix option for master model/max-tokens/temperature
 
-Only the 429 case is tested. The 401/403, 5xx, and generic-failure paths are uncovered. Additionally, the stub exits 22 (mimicking `--fail-with-body`), but since the tests don't use `set -e`, this doesn't catch the CR-01 bug.
-
-**Suggestion:** Add parameterized test cases for each HTTP status class (401, 403, 500, 000-for-network-error). If response body inclusion from WR-01 is implemented, also test that the body appears in the notification.
-
-### IN-03: README pipeline diagram stale arrow text
-
-**File:** `README.md:33`
-**Issue:** The pipeline diagram now reads "│ each chunk" on line 33, but the "each chunk" text is a leftover from the old chunking pipeline. With the removed chunking lines above, the arrow now says "│ each chunk" pointing from the trim step directly to the TTS engine, which is slightly misleading — there is no chunking happening in the pipeline anymore (the removal of lines 33-34 confirms this). The word "each" implies multiple iterations that don't occur.
-
-**Suggestion:** Change "│ each chunk" to "│ text" or simply remove that line:
-
-```
- ┌──────────────────┬──────────────────────────┘
--                    │ each chunk
-+                    │
-                     ▼
-```
+**File:** `nix/options.nix`, `modules/voice-tools.nix`
+**Issue:** `master-openrouter.sh` uses `LAZY_READER_MASTER_MODEL`, `LAZY_READER_MASTER_MAX_TOKENS`, and `LAZY_READER_MASTER_TEMPERATURE`. `voice-tools.nix` only sets the model via `environment.sessionVariables`; the token/temperature defaults are hardcoded in the script. For consistency with other modes, consider Nix options or at least env vars in `voice-tools.nix`.
 
 ---
 
-## Fix Verification Summary
-
-| Bug # | Description                               | Correct? | Notes                                                             |
-| ----- | ----------------------------------------- | -------- | ----------------------------------------------------------------- |
-| 1a    | OpenRouter: curl timeout/retry            | ✅       | `--max-time 60 --connect-timeout 10 --retry 2 --retry-delay 1`    |
-| 1b    | OpenRouter: temp file (no pipe-to-player) | ✅       | Prevents error body from corrupting audio player                  |
-| 1c    | OpenRouter: HTTP status classification    | ❌ CR-01 | `--fail-with-body` + `set -e` kills process before classification |
-| 1d    | OpenRouter: error body lost               | ⚠️ WR-01 | Temp file deleted without reading on error                        |
-| 2     | PID file: noclobber atomic write          | ✅       | Correct race-free claim                                           |
-| 3     | Nix wrapper: single→double quotes         | ✅       | Now properly expands bash vars                                    |
-| 4     | TTS defaults: preserve existing values    | ✅       | Chained fallbacks correct                                         |
-
-## Test Coverage Gaps
-
-| Area                              | Coverage   | Gap                                          |
-| --------------------------------- | ---------- | -------------------------------------------- |
-| OpenRouter MP3 success            | ✅ 3 tests | —                                            |
-| OpenRouter PCM success            | ✅ 2 tests | —                                            |
-| PCM uses aplay, not PLAYER        | ✅ 1 test  | —                                            |
-| HTTP 429 error                    | ✅ 1 test  | Stub exits 22, but test doesn't use `set -e` |
-| HTTP 401/403 error                | ❌         | Not tested (CR-01 affects this path)         |
-| HTTP 5xx error                    | ❌         | Not tested                                   |
-| Network failure (curl no-connect) | ❌         | Not tested                                   |
-| curl timeout                      | ❌         | Not tested                                   |
-| curl retry exhausted              | ❌         | Not tested                                   |
-
----
-
-## Cross-File Dependencies Impacted
-
-| Change                     | Depends on                                         | Risk                                         |
-| -------------------------- | -------------------------------------------------- | -------------------------------------------- | --- | ------------------------------------- |
-| nix/script.nix quote fix   | scripts/lib/config.sh reads LAZY*READER*\* vars    | None — env var names unchanged               |
-| load_tts_config() cascade  | config.sh sets TTS_PROVIDER first                  | None — case statement validates after        |
-| PID noclobber              | pid.sh cleanup(), cleanup_stale_pid_file()         | None — both use OWNS_PID_FILE flag correctly |
-| narrator.sh stderr capture | scripts/lib/narrator.sh called from lazy-reader.sh | None — `                                     |     | exit_code=$?` protects against set -e |
-
----
-
-_Reviewed: 2026-06-09T21:10:00Z_
+_Reviewed: 2026-06-13_
 _Reviewer: gsd-code-reviewer_
 _Depth: standard_

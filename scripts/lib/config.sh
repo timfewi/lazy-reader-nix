@@ -23,7 +23,7 @@ normalize_speed_alias() {
 
 openrouter_api_key_file="${LAZY_READER_OPENROUTER_API_KEY_FILE:-}"
 if [[ -z "${LAZY_READER_OPENROUTER_API_KEY:-}" ]] && [[ -n "$openrouter_api_key_file" ]] && [[ -r "$openrouter_api_key_file" ]]; then
-	export LAZY_READER_OPENROUTER_API_KEY="$(<"$openrouter_api_key_file")"
+	export LAZY_READER_OPENROUTER_API_KEY="$(tr -d '\n' <"$openrouter_api_key_file")"
 fi
 readonly OPENROUTER_API_KEY_FILE="$openrouter_api_key_file"
 
@@ -60,6 +60,9 @@ readonly ASK_MAX_CHARS="${LAZY_READER_ASK_MAX_CHARS:-${MAX_CHARS}}"
 readonly TEACH_CMD="${LAZY_READER_TEACH_CMD:-}"
 readonly TEACH_MAX_CHARS="${LAZY_READER_TEACH_MAX_CHARS:-30000}"
 readonly TEACH_INPUT_MAX_CHARS="${LAZY_READER_TEACH_INPUT_MAX_CHARS:-50000}"
+readonly MASTER_CMD="${LAZY_READER_MASTER_CMD:-}"
+readonly MASTER_MAX_CHARS="${LAZY_READER_MASTER_MAX_CHARS:-32000}"
+readonly MASTER_INPUT_MAX_CHARS="${LAZY_READER_MASTER_INPUT_MAX_CHARS:-60000}"
 readonly NOTIFY_TITLE="Lazy Reader"
 readonly RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 readonly PID_FILE="${RUNTIME_DIR}/lazy-reader.pid"
