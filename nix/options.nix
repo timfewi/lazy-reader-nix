@@ -358,6 +358,36 @@
     description = "Clear Super+M from GNOME default bindings to avoid shortcut conflict.";
   };
 
+  visionCommand = lib.mkOption {
+    type = lib.types.str;
+    default = "";
+    description = ''
+      Shell command that receives raw image bytes (a clipboard screenshot) on
+      stdin and prints a spoken-style reading of the image to stdout. The default
+      implementation base64-encodes the image and sends it to an external
+      multimodal LLM API. Do not use with screenshots containing passwords,
+      secrets, or sensitive PII. Leave empty to disable vision/screenshot mode.
+    '';
+  };
+
+  visionMaxChars = lib.mkOption {
+    type = lib.types.ints.positive;
+    default = 24000;
+    description = "Maximum characters of visionCommand output passed to TTS.";
+  };
+
+  enableVisionInGnome = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Register an additional GNOME shortcut that runs lazy-reader vision (reads a clipboard screenshot).";
+  };
+
+  gnomeVisionShortcut = lib.mkOption {
+    type = lib.types.str;
+    default = "<Super>i";
+    description = "GNOME keybinding string used to trigger vision/screenshot mode (default: Super+I).";
+  };
+
   ttsProvider = lib.mkOption {
     type = lib.types.enum [
       "piper"

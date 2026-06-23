@@ -93,6 +93,10 @@ pkgs.writeShellApplication {
     fi
     export LAZY_READER_MASTER_MAX_CHARS="''${LAZY_READER_MASTER_MAX_CHARS:-${toString cfg.masterMaxChars}}"
     export LAZY_READER_MASTER_INPUT_MAX_CHARS="''${LAZY_READER_MASTER_INPUT_MAX_CHARS:-${toString cfg.masterInputMaxChars}}"
+    if [[ -z "''${LAZY_READER_VISION_CMD:-}" ]]; then
+      export LAZY_READER_VISION_CMD=${lib.escapeShellArg cfg.visionCommand}
+    fi
+    export LAZY_READER_VISION_MAX_CHARS="''${LAZY_READER_VISION_MAX_CHARS:-${toString cfg.visionMaxChars}}"
     exec ${pkgs.bash}/bin/bash ${../scripts}/lazy-reader.sh "$@"
   '';
 }

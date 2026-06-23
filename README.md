@@ -108,6 +108,13 @@ Import the module in your NixOS config:
     # clearDefaultSuperQInGnome = true; # removes <Super>q from GNOME window-close binding
     # problemSolverCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/problem-solver-openrouter.sh;
     # problemSolverMaxChars = 24000;
+
+    # Vision / screenshot mode: take a screenshot to the clipboard, then press
+    # the shortcut to have a multimodal model read or describe it aloud.
+    # enableVisionInGnome = true;            # registers the Super+I binding
+    # gnomeVisionShortcut = "<Super>i";      # default shortcut for vision mode
+    # visionCommand = builtins.readFile /path/to/lazy-reader-nix/scripts/vision-openrouter.sh;
+    # visionMaxChars = 24000;
   };
 }
 ```

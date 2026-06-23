@@ -29,6 +29,32 @@ read_clipboard() {
 	printf '%s' "$text"
 }
 
+# Detects an image on the Wayland clipboard and prints its MIME type
+# (preferring image/png). Prints nothing and returns 1 when no image is present.
+detect_clipboard_image_mime() {
+	local types
+
+	if ! command -v wl-paste >/dev/null 2>&1; then
+		return 1
+	fi
+
+	types="$(wl-paste --list-types 2>/dev/null || true)"
+
+	if grep -qx 'image/png' <<<"$types"; then
+		printf 'image/png'
+		return 0
+	fi
+
+	local mime
+	mime="$(grep -m1 -E '^image/' <<<"$types" || true)"
+	if [[ -n "$mime" ]]; then
+		printf '%s' "$mime"
+		return 0
+	fi
+
+	return 1
+}
+
 read_input_text() {
 	local input_source="${1:-selection}"
 

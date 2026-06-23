@@ -31,12 +31,14 @@ source "${_DIR}/lib/asker.sh"
 source "${_DIR}/lib/teacher.sh"
 # shellcheck source=scripts/lib/master.sh
 source "${_DIR}/lib/master.sh"
+# shellcheck source=scripts/lib/vision.sh
+source "${_DIR}/lib/vision.sh"
 
 INPUT_SOURCE="selection"
 MODE="toggle"
 
 usage() {
-	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master]"
+	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master|vision]"
 }
 
 parse_args() {
@@ -64,12 +66,17 @@ parse_args() {
 			usage
 			exit 0
 			;;
-		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach | master)
+		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach | master | vision | screenshot)
 			if ((has_mode)); then
 				printf '%s\n' "error: multiple commands provided" >&2
 				return 1
 			fi
-			MODE="$1"
+			# "screenshot" is an alias for the vision mode.
+			if [[ "$1" == "screenshot" ]]; then
+				MODE="vision"
+			else
+				MODE="$1"
+			fi
 			has_mode=1
 			;;
 		*)
@@ -286,6 +293,39 @@ master_selection() {
 	speak_generated_text "$master_text" "Master summary..."
 }
 
+vision_selection() {
+	validate_config
+
+	if [[ -z "$VISION_CMD" ]]; then
+		notify "No vision command configured. Set services.lazy-reader.visionCommand first."
+		exit 1
+	fi
+
+	local mime
+	if ! mime="$(detect_clipboard_image_mime)"; then
+		notify "No image in clipboard. Take a screenshot to the clipboard first, then press Super+I."
+		exit 1
+	fi
+
+	if ! zenity --question --title="Lazy Reader Screenshot" \
+		--text="Send the clipboard screenshot to OpenRouter to read aloud?\n\nWARNING: Do not send images containing passwords, API keys, or sensitive personal data." \
+		--ok-label="Send" --cancel-label="Cancel" 2>/dev/null; then
+		notify "Screenshot reading cancelled."
+		exit 0
+	fi
+
+	notify "Reading screenshot..."
+
+	# Pipe the raw clipboard image straight into the vision command. The binary
+	# bytes flow through the pipe into run_vision's stdin; only the textual model
+	# output is captured here.
+	local vision_text
+	export LAZY_READER_VISION_MIME="$mime"
+	vision_text="$(wl-paste --type "$mime" 2>/dev/null | run_vision)"
+
+	speak_generated_text "$vision_text" "Reading screenshot..."
+}
+
 main() {
 	mkdir -p "$RUNTIME_DIR"
 	cleanup_stale_pid_file
@@ -320,7 +360,7 @@ main() {
 		fi
 		exit 0
 		;;
-	explain | summarize | narrate | solve | ask | teach | master)
+	explain | summarize | narrate | solve | ask | teach | master | vision)
 		if is_running; then
 			stop_running_reader
 			exit 0
@@ -361,6 +401,7 @@ main() {
 	ask) ask_selection ;;
 	teach) teach_selection ;;
 	master) master_selection ;;
+	vision) vision_selection ;;
 	*) start_reading ;;
 	esac
 }

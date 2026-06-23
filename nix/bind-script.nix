@@ -148,5 +148,11 @@ pkgs.writeShellApplication {
         value = "<Super>m";
       });
     })}
+
+    ${lib.optionalString cfg.enableVisionInGnome (mkBinding {
+      name = "Lazy Reader Vision";
+      commandSuffix = "vision";
+      shortcut = cfg.gnomeVisionShortcut;
+    })}
   '';
 }
