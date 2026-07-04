@@ -42,10 +42,23 @@ run_asker() {
 	fi
 
 	local answered_text
-	if ! answered_text="$(printf '%s' "$input_text" | LAZY_READER_ASK_QUESTION="$ASK_QUESTION" bash -c "$ASK_CMD" 2>/dev/null)"; then
-		notify "Ask command failed. Check services.lazy-reader.askCommand."
+	local stderr_file
+	stderr_file="$(mktemp)"
+	local exit_code=0
+	answered_text="$(printf '%s' "$input_text" | LAZY_READER_ASK_QUESTION="$ASK_QUESTION" bash -c "$ASK_CMD" 2>"$stderr_file")" || exit_code=$?
+
+	if ((exit_code)); then
+		local error_msg
+		error_msg="$(<"$stderr_file")"
+		rm -f "$stderr_file"
+		if [[ -n "$error_msg" ]]; then
+			notify "Ask command failed (exit $exit_code): $error_msg"
+		else
+			notify "Ask command failed (exit $exit_code). Check services.lazy-reader.askCommand."
+		fi
 		return 1
 	fi
+	rm -f "$stderr_file"
 
 	if [[ -z "${answered_text//[[:space:]]/}" ]]; then
 		notify "Ask command returned empty output."

@@ -2,6 +2,9 @@
 
 run_explainer() {
 	local input_text="$1"
+	local stderr_file
+	stderr_file="$(mktemp)"
+	local exit_code=0
 
 	if [[ -z "$EXPLAIN_CMD" ]]; then
 		notify "No explainer configured. Set services.lazy-reader.explainCommand first."
@@ -9,10 +12,20 @@ run_explainer() {
 	fi
 
 	local explained_text
-	if ! explained_text="$(printf '%s' "$input_text" | bash -c "$EXPLAIN_CMD" 2>/dev/null)"; then
-		notify "Explain command failed. Check services.lazy-reader.explainCommand."
+	explained_text="$(printf '%s' "$input_text" | bash -c "$EXPLAIN_CMD" 2>"$stderr_file")" || exit_code=$?
+
+	if ((exit_code)); then
+		local error_msg
+		error_msg="$(<"$stderr_file")"
+		rm -f "$stderr_file"
+		if [[ -n "$error_msg" ]]; then
+			notify "Explain command failed (exit $exit_code): $error_msg"
+		else
+			notify "Explain command failed (exit $exit_code). Check services.lazy-reader.explainCommand."
+		fi
 		exit 1
 	fi
+	rm -f "$stderr_file"
 
 	if [[ -z "${explained_text//[[:space:]]/}" ]]; then
 		notify "Explain command returned empty output."

@@ -303,7 +303,7 @@ vision_selection() {
 
 	local mime
 	if ! mime="$(detect_clipboard_image_mime)"; then
-		notify "No image in clipboard. Take a screenshot to the clipboard first, then press Super+I."
+		notify "No image in clipboard. Take a screenshot to the clipboard first, then trigger screenshot reading again."
 		exit 1
 	fi
 
