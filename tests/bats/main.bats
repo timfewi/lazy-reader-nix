@@ -299,7 +299,7 @@ run_lr() {
   run env \
     "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
     "LAZY_READER_MODEL=${MODEL_FILE}" \
-    "LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=18" \
+    "LAZY_READER_GENERATED_SPEECH_CHUNK_MAX_CHARS=30" \
     "LAZY_READER_NARRATE_MAX_CHARS=200" \
     "LAZY_READER_NARRATE_CMD=printf 'First generated sentence. Second generated sentence.'" \
     "LAZY_READER_TEST_SELECTION=source text" \
@@ -310,10 +310,10 @@ run_lr() {
   [ "$status" -eq 0 ]
   run bash -c "grep -c '^--chunk--$' '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" -eq 1 ]
+  [ "$output" -eq 2 ]
   run bash -c "head -n 1 '${chunk_log}'"
   [ "$status" -eq 0 ]
-  [ "$output" = "First generated sentence. Second generated sentence." ]
+  [ "$output" = "First generated sentence." ]
 }
 
 @test "narrate: exits 0 and stops reading when already running" {

@@ -25,7 +25,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("You are helping someone understand a page from a programming book. Explain it clearly and simply, as if the listener is reasonably smart but completely new to this specific topic. Use plain short sentences and include a helpful analogy if it makes the concept clearer. Cover these four things in a natural flowing way: what this concept is, why it matters in practice, how it works in simple terms, and the one thing the listener should remember. Do not use markdown, bullet points, headings, code formatting, or any symbols. Speak naturally as if talking to a friend.\n\nPage:\n\n" + $t)
+          content:("You are helping someone understand a page from a programming book. Explain it clearly and simply, as if the listener is reasonably smart but completely new to this specific topic. Use plain short sentences and include a helpful analogy if it makes the concept clearer. Cover these four things in a natural flowing way: what this concept is, why it matters in practice, how it works in simple terms, and the one thing the listener should remember. Do not use markdown, bullet points, headings, code formatting, or any symbols. Speak naturally as if talking to a friend. Respond in the same language as the page.\n\nPage:\n\n" + $t)
         }
       ]
     }')") || {

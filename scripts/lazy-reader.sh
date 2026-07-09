@@ -150,12 +150,23 @@ start_reading() {
 	done < <(split_text_into_reading_sections "$text")
 }
 
-speak_generated_text() {
+# Speech endpoints cap the input of a single request (x-ai/grok-voice-tts-1.0
+# rejects more than 15000 characters), so split on sentence boundaries first.
+# Only the first chunk carries the notification; the rest play silently.
+speak_text_chunked() {
 	local text="$1"
 	local started_message="$2"
+	local chunk
+	local chunk_index=0
 
-	# Send all text in a single TTS call — OpenRouter handles arbitrary length.
-	speak_text "$text" "$started_message"
+	while IFS= read -r -d '' chunk; do
+		if ((chunk_index == 0)); then
+			speak_text "$chunk" "$started_message"
+		else
+			speak_text "$chunk" ""
+		fi
+		((chunk_index += 1))
+	done < <(chunk_text_for_reading "$text" "$GENERATED_SPEECH_CHUNK_MAX_CHARS")
 }
 
 speak_reading_section() {
@@ -166,19 +177,18 @@ speak_reading_section() {
 	if [[ "$section_kind" == "code" ]]; then
 		if [[ -n "$EXPLAIN_CMD" ]]; then
 			section_text="$(trim_text "$section_text" "$MAX_CHARS")"
-			speak_generated_text "$(run_explainer "$section_text")" "$started_message"
+			speak_text_chunked "$(run_explainer "$section_text")" "$started_message"
 			return 0
 		fi
 
 		if [[ -n "$NARRATE_CMD" ]]; then
 			section_text="$(trim_text "$section_text" "$NARRATE_INPUT_MAX_CHARS")"
-			speak_generated_text "$(run_narrator "$section_text")" "$started_message"
+			speak_text_chunked "$(run_narrator "$section_text")" "$started_message"
 			return 0
 		fi
 	fi
 
-	# prose — send full section in a single TTS call
-	speak_text "$section_text" "$started_message"
+	speak_text_chunked "$section_text" "$started_message"
 }
 
 narrate_selection() {
@@ -190,7 +200,7 @@ narrate_selection() {
 	local narrated_text
 	narrated_text="$(run_narrator "$text")"
 
-	speak_generated_text "$narrated_text" "Reading narration..."
+	speak_text_chunked "$narrated_text" "Reading narration..."
 }
 
 explain_selection() {
@@ -202,7 +212,7 @@ explain_selection() {
 	local explained_text
 	explained_text="$(run_explainer "$text")"
 
-	speak_generated_text "$explained_text" "Reading explanation..."
+	speak_text_chunked "$explained_text" "Reading explanation..."
 }
 
 summarize_selection() {
@@ -214,7 +224,7 @@ summarize_selection() {
 	local summarized_text
 	summarized_text="$(run_summarizer "$text")"
 
-	speak_generated_text "$summarized_text" "Reading summary..."
+	speak_text_chunked "$summarized_text" "Reading summary..."
 }
 
 solve_selection() {
@@ -226,7 +236,7 @@ solve_selection() {
 	local solved_text
 	solved_text="$(run_problem_solver "$text")"
 
-	speak_generated_text "$solved_text" "Reading solution..."
+	speak_text_chunked "$solved_text" "Reading solution..."
 }
 
 ask_selection() {
@@ -255,7 +265,7 @@ ask_selection() {
 		exit 0
 	fi
 
-	speak_generated_text "$answered_text" "Reading answer..."
+	speak_text_chunked "$answered_text" "Reading answer..."
 }
 
 teach_selection() {
@@ -267,7 +277,7 @@ teach_selection() {
 	local taught_text
 	taught_text="$(run_teacher "$text")"
 
-	speak_generated_text "$taught_text" "Reading explanation..."
+	speak_text_chunked "$taught_text" "Reading explanation..."
 }
 
 master_selection() {
@@ -290,7 +300,7 @@ master_selection() {
 	local master_text
 	master_text="$(run_master "$text")"
 
-	speak_generated_text "$master_text" "Master summary..."
+	speak_text_chunked "$master_text" "Master summary..."
 }
 
 vision_selection() {
@@ -323,7 +333,7 @@ vision_selection() {
 	export LAZY_READER_VISION_MIME="$mime"
 	vision_text="$(wl-paste --type "$mime" 2>/dev/null | run_vision)"
 
-	speak_generated_text "$vision_text" "Reading screenshot..."
+	speak_text_chunked "$vision_text" "Reading screenshot..."
 }
 
 main() {

@@ -142,7 +142,26 @@ Kokoro uses prefixed voice IDs. Use `af_alloy` for Alloy, not `alloy`.
 The full upstream Kokoro voice table is also available in
 `https://huggingface.co/hexgrad/Kokoro-82M/raw/main/VOICES.md`.
 
-### Known working xAI Grok Voice TTS config
+## Languages
+
+Only a few of these models are multilingual. `x-ai/grok-voice-tts-1.0` is the
+default because it covers 20+ languages and detects the language of the input
+itself, so the same voice reads English and German without any configuration.
+
+Kokoro covers exactly eight languages — American and British English, Spanish,
+French, Hindi, Italian, Japanese, Chinese — encoded in the voice prefix
+(`af_`/`am_`, `bf_`/`bm_`, `ef_`/`em_`, `ff_`, `hf_`/`hm_`, `if_`/`im_`,
+`jf_`/`jm_`, `pf_`/`pm_`, `zf_`/`zm_`). **It has no German voice.** German text
+sent to a Kokoro voice is phonemized as English and comes out mangled. The same
+holds for the English-only models (`zonos`, `csm-1b`, `orpheus`) and the local
+Piper default (`en_US-ryan-medium`).
+
+Note that a speech request has a per-model input cap — grok rejects more than
+15000 characters. `lazy-reader` splits text on sentence boundaries at
+`generatedSpeechChunkMaxChars` (default 14000) before synthesizing, so long
+selections are spoken as several requests.
+
+### Known working xAI Grok Voice TTS config (default)
 
 ```nix
 services.lazy-reader = {

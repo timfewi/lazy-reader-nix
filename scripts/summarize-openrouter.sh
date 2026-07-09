@@ -24,7 +24,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("Summarize the following passage for listening aloud. Compress it into a clear spoken summary that keeps the main point, the most important supporting details, and any conclusion or next step. Prefer short paragraphs or a smooth spoken flow rather than a list. Do not use markdown, bullet points, headings, or code formatting. Avoid reading symbols aloud unless absolutely necessary. If the passage is technical, translate it into plain language while preserving the key meaning. Keep the summary concise but complete enough that someone could understand the passage without hearing every original detail.\n\nPassage:\n\n" + $t)
+          content:("Summarize the following passage for listening aloud. Compress it into a clear spoken summary that keeps the main point, the most important supporting details, and any conclusion or next step. Prefer short paragraphs or a smooth spoken flow rather than a list. Do not use markdown, bullet points, headings, or code formatting. Avoid reading symbols aloud unless absolutely necessary. If the passage is technical, translate it into plain language while preserving the key meaning. Keep the summary concise but complete enough that someone could understand the passage without hearing every original detail. Respond in the same language as the passage.\n\nPassage:\n\n" + $t)
         }
       ]
     }')") || {
