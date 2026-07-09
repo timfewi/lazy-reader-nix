@@ -12,15 +12,7 @@ setup() {
     printf "%s\n" "$@" >> "$LAZY_READER_TEST_CURL_LOG"
     printf "{\"choices\":[{\"message\":{\"content\":\"spoken summary\"}}]}"
   '
-  make_stub "jq" '
-    if [[ "${1:-}" == "-n" ]]; then
-      printf "%s\n" "$@" >> "$LAZY_READER_TEST_JQ_LOG"
-      printf "{\"payload\":true}"
-    else
-      cat >/dev/null
-      printf "spoken summary"
-    fi
-  '
+  make_openrouter_jq_stub "spoken summary"
 }
 
 teardown() {
@@ -44,7 +36,7 @@ teardown() {
   run bash -c "grep -F -- 'A detailed technical passage.' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- 'qwen/qwen3.7-plus' '${jq_log}'"
+  run bash -c "grep -F -- 'openai/gpt-4o-mini' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- '32000' '${jq_log}'"
@@ -99,5 +91,5 @@ teardown() {
     bash -c "printf '%s' 'summary input' | bash '${SCRIPTS_DIR}/summarize-openrouter.sh'"
 
   [ "$status" -ne 0 ]
-  [[ "$output" == *"OpenRouter API request failed. Check LAZY_READER_OPENROUTER_API_KEY and network."* ]]
+  [[ "$output" == *"OpenRouter API request failed (curl exit code"* ]]
 }

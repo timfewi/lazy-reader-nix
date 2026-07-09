@@ -12,15 +12,7 @@ setup() {
     printf "%s\n" "$@" >> "$LAZY_READER_TEST_CURL_LOG"
     printf "{\"choices\":[{\"message\":{\"content\":\"spoken narration\"}}]}"
   '
-  make_stub "jq" '
-    if [[ "${1:-}" == "-n" ]]; then
-      printf "%s\n" "$@" >> "$LAZY_READER_TEST_JQ_LOG"
-      printf "{\"payload\":true}"
-    else
-      cat >/dev/null
-      printf "spoken narration"
-    fi
-  '
+  make_openrouter_jq_stub "spoken narration"
 }
 
 teardown() {
@@ -44,7 +36,7 @@ teardown() {
   run bash -c "grep -F -- 'let total = sum(items);' '${jq_log}'"
   [ "$status" -eq 0 ]
 
-  run bash -c "grep -F -- 'qwen/qwen3.6-flash' '${jq_log}'"
+  run bash -c "grep -F -- 'openai/gpt-4o-mini' '${jq_log}'"
   [ "$status" -eq 0 ]
 
   run bash -c "grep -F -- '32000' '${jq_log}'"

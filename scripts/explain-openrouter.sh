@@ -4,7 +4,7 @@ set -o pipefail
 # OpenRouter explain command for lazy-reader (consumed via builtins.readFile)
 # Reads selected text from stdin and prints concise explanation to stdout.
 input="$(cat)"
-model="${LAZY_READER_EXPLAIN_MODEL:-openai/gpt-oss-safeguard-20b}"
+model="${LAZY_READER_EXPLAIN_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_EXPLAIN_MAX_TOKENS:-12000}"
 temperature="${LAZY_READER_EXPLAIN_TEMPERATURE:-0.1}"
 
@@ -24,7 +24,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("Explain this code in short, natural spoken language for listening. Use 4 to 6 simple sentences. No bullet points, no markdown, no code formatting, and no symbols like star dash hash slash backticks or braces. Use plain words as if a person is speaking. If context is missing, make one brief assumption and continue. Respond in the same language as the comments and strings in the code; if that is ambiguous, use English. Keep identifiers verbatim, never translate them.\n\nCode:\n\n" + $t)
+          content:("Explain this code in short, natural spoken language for listening. Use 4 to 6 simple sentences. No bullet points, no markdown, no code formatting, and no symbols like star dash hash slash backticks or braces. Use plain words as if a person is speaking. If context is missing, make one brief assumption and continue.\n\nCode:\n\n" + $t)
         }
       ]
     }')") || {

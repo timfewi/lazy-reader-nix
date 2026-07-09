@@ -144,24 +144,36 @@ The full upstream Kokoro voice table is also available in
 
 ## Languages
 
-Only a few of these models are multilingual. `x-ai/grok-voice-tts-1.0` is the
-default because it covers 20+ languages and detects the language of the input
-itself, so the same voice reads English and German without any configuration.
+`lazy-reader` speaks English. Non-English text is not supported through
+OpenRouter today, and the obvious workarounds do not work:
 
 Kokoro covers exactly eight languages — American and British English, Spanish,
 French, Hindi, Italian, Japanese, Chinese — encoded in the voice prefix
 (`af_`/`am_`, `bf_`/`bm_`, `ef_`/`em_`, `ff_`, `hf_`/`hm_`, `if_`/`im_`,
-`jf_`/`jm_`, `pf_`/`pm_`, `zf_`/`zm_`). **It has no German voice.** German text
-sent to a Kokoro voice is phonemized as English and comes out mangled. The same
+`jf_`/`jm_`, `pf_`/`pm_`, `zf_`/`zm_`). **It has no German voice.** The same
 holds for the English-only models (`zonos`, `csm-1b`, `orpheus`) and the local
 Piper default (`en_US-ryan-medium`).
 
-Note that a speech request has a per-model input cap — grok rejects more than
-15000 characters. `lazy-reader` splits text on sentence boundaries at
-`generatedSpeechChunkMaxChars` (default 14000) before synthesizing, so long
-selections are spoken as several requests.
+`x-ai/grok-voice-tts-1.0` advertises 20+ languages with automatic language
+detection, and it does — but only on xAI's native API, where `language`
+(BCP-47 or `auto`) is a required request field. OpenRouter's `/audio/speech` is
+OpenAI-compatible and has no `language` field at all, so grok never receives
+one and falls back to English pronunciation. German text sent through it comes
+out as German words read with an English phonemizer. Tried in July 2026;
+`speed` is likewise ignored by grok on this endpoint. Untested escape hatch:
+OpenRouter's `provider` passthrough, `{"provider":{"options":{"xai":{"language":"auto"}}}}`.
 
-### Known working xAI Grok Voice TTS config (default)
+Getting German would mean either that passthrough, or a local Piper `de_DE`
+voice — but `ttsProvider` is global, so that would route English through Piper
+too, at lower quality than Kokoro.
+
+Note that a speech request has a per-model input cap — grok rejects more than
+15000 characters, and Kokoro's context is 4096 tokens. `lazy-reader` splits
+text on sentence boundaries at `generatedSpeechChunkMaxChars` (default 14000)
+before synthesizing, so long selections are spoken as several requests rather
+than being silently truncated.
+
+### Known working xAI Grok Voice TTS config
 
 ```nix
 services.lazy-reader = {

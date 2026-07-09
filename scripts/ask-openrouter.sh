@@ -5,7 +5,7 @@ set -o pipefail
 # Reads selected text from stdin and LAZY_READER_ASK_QUESTION from the environment,
 # then prints a concise spoken-language answer to stdout.
 input="$(cat)"
-model="${LAZY_READER_ASK_MODEL:-openai/gpt-oss-safeguard-20b}"
+model="${LAZY_READER_ASK_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_ASK_MAX_TOKENS:-12000}"
 temperature="${LAZY_READER_ASK_TEMPERATURE:-0.2}"
 
@@ -26,7 +26,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("You are a helpful assistant answering a question about a piece of text. Answer in short, natural spoken language suitable for listening aloud. Use plain words and full sentences. Do not use bullet points, markdown, code formatting, or symbols like star, dash, hash, slash, backticks, or braces. Give a concise, direct answer. If context is ambiguous, make one brief assumption and continue. Respond in the same language as the question.\n\nContext:\n\n" + $ctx + "\n\nQuestion: " + $q)
+          content:("You are a helpful assistant answering a question about a piece of text. Answer in short, natural spoken language suitable for listening aloud. Use plain words and full sentences. Do not use bullet points, markdown, code formatting, or symbols like star, dash, hash, slash, backticks, or braces. Give a concise, direct answer. If context is ambiguous, make one brief assumption and continue.\n\nContext:\n\n" + $ctx + "\n\nQuestion: " + $q)
         }
       ]
     }')") || {
