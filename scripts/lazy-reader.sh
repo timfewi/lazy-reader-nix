@@ -43,9 +43,9 @@ usage() {
 }
 
 # Persist a language preset so every mode answers in that language and TTS uses
-# a voice that can pronounce it. `switch german` points TTS at the grok voice
-# (the only OpenRouter model that speaks German, via the xAI language
-# passthrough in tts.sh); `switch english` restores the kokoro default. Both
+# a voice that can pronounce it. Both `switch german` and `switch english` point
+# TTS at kokoro-82m (the fastest OpenRouter TTS); they differ only in the LLM
+# language directive persisted to lang.conf. Both
 # write lang.conf + tts.conf, so the choice survives without a NixOS rebuild
 # and is picked up by load_tts_config on the next run.
 switch_language() {
@@ -58,8 +58,12 @@ switch_language() {
 		lang="de"
 		label="German"
 		provider="openrouter"
-		model="x-ai/grok-voice-tts-1.0"
-		voice="eve"
+		# kokoro-82m is the fastest OpenRouter TTS (tiny 82M model, near-realtime).
+		# The LLM directive already makes the text German; kokoro reads it with an
+		# English accent but with far lower latency than grok-voice. Speed over
+		# pronunciation was the explicit choice.
+		model="hexgrad/kokoro-82m"
+		voice="af_heart"
 		;;
 	en | english | englisch)
 		lang="en"
@@ -468,6 +472,17 @@ main() {
 	fi
 	OWNS_PID_FILE="1"
 	trap cleanup EXIT INT TERM
+
+	# Immediate feedback: the LLM + TTS round-trips take several seconds, but the
+	# per-mode "Reading…" toast only fires once speech starts — leaving a silent
+	# gap after the keypress that reads as "nothing happened". Announce work up
+	# front with a long-lived toast (replaced by the "Reading…" toast when audio
+	# begins). ask/master/vision open a dialog first, so their own UX covers it.
+	case "$MODE" in
+	narrate | explain | summarize | solve | teach | toggle | start)
+		notify "Working… contacting the model (a few seconds)." 30000
+		;;
+	esac
 
 	case "$MODE" in
 	narrate) narrate_selection ;;

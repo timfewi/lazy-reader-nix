@@ -24,14 +24,14 @@ run_lr() {
     bash "${SCRIPTS_DIR}/lazy-reader.sh" "$@"
 }
 
-@test "switch german: writes lang.conf and points TTS at the grok voice" {
+@test "switch german: writes lang.conf and points TTS at the fast kokoro voice" {
   run_lr switch german
   [ "$status" -eq 0 ]
   run cat "${XDG_CONFIG_HOME}/lazy-reader/lang.conf"
   [ "$output" = "LANGUAGE=de" ]
   run cat "${XDG_CONFIG_HOME}/lazy-reader/tts.conf"
-  [[ "$output" == *"TTS_MODEL=x-ai/grok-voice-tts-1.0"* ]]
-  [[ "$output" == *"TTS_VOICE=eve"* ]]
+  [[ "$output" == *"TTS_MODEL=hexgrad/kokoro-82m"* ]]
+  [[ "$output" == *"TTS_VOICE=af_heart"* ]]
 }
 
 @test "switch english: restores the kokoro default" {
