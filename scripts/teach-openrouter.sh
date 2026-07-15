@@ -8,6 +8,9 @@ input="$(cat)"
 model="${LAZY_READER_TEACH_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_TEACH_MAX_TOKENS:-18000}"
 temperature="${LAZY_READER_TEACH_TEMPERATURE:-0.2}"
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+lang="${LAZY_READER_LANG_DIRECTIVE:-}"
 
 response=$(curl -sS --max-time 120 --connect-timeout 15 \
 	https://openrouter.ai/api/v1/chat/completions \
@@ -18,6 +21,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
 		--arg m "$model" \
 		--argjson tok "$max_tokens" \
 		--argjson temp "$temperature" \
+		--arg lang "$lang" \
 		'{
       model:$m,
       temperature:$temp,
@@ -25,7 +29,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("You are helping someone understand a page from a programming book. Explain it clearly and simply, as if the listener is reasonably smart but completely new to this specific topic. Use plain short sentences and include a helpful analogy if it makes the concept clearer. Cover these four things in a natural flowing way: what this concept is, why it matters in practice, how it works in simple terms, and the one thing the listener should remember. Do not use markdown, bullet points, headings, code formatting, or any symbols. Speak naturally as if talking to a friend.\n\nPage:\n\n" + $t)
+          content:("You are helping someone understand a page from a programming book. Explain it clearly and simply, as if the listener is reasonably smart but completely new to this specific topic. Use plain short sentences and include a helpful analogy if it makes the concept clearer. Cover these four things in a natural flowing way: what this concept is, why it matters in practice, how it works in simple terms, and the one thing the listener should remember. Do not use markdown, bullet points, headings, code formatting, or any symbols. Speak naturally as if talking to a friend.\n\nPage:\n\n" + $t + $lang)
         }
       ]
     }')") || {

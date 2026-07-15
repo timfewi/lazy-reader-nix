@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+# Maps a language code to the instruction appended to every LLM prompt so all
+# modes answer in that language. Empty for English (the built-in default), so
+# unset behaviour is byte-for-byte the English prompts. Written by
+# `lazy-reader switch <language>` into lang.conf and read in load_tts_config.
+language_directive() {
+	case "${1,,}" in
+	de | german | deutsch)
+		printf '%s' $'\n\nAntworte ausschließlich auf Deutsch, unabhängig von der Sprache des Eingabetexts. Behalte dabei alle Bezeichner, Funktionsnamen, Optionen, Flags, exakten Werte, Dateipfade und Befehle unverändert bei und übersetze sie nicht.'
+		;;
+	*)
+		printf ''
+		;;
+	esac
+}
+
 validate_config() {
 	load_tts_config
 	if ! [[ "$SPEED" =~ ^[0-9]+([.][0-9]+)?$ ]] || ! awk -v speed="$SPEED" 'BEGIN { exit !(speed > 0) }'; then
@@ -138,6 +153,23 @@ load_tts_config() {
 		done <"$config_file"
 	fi
 
+	# Language preset (written by `lazy-reader switch <language>`). Drives the
+	# directive appended to every LLM prompt and the grok-voice language
+	# passthrough below. Empty / "en" = English, the built-in default.
+	LANGUAGE="${LANGUAGE:-${LAZY_READER_LANGUAGE:-}}"
+	local lang_file="${XDG_CONFIG_HOME:-$HOME/.config}/lazy-reader/lang.conf"
+	if [[ -f "$lang_file" ]]; then
+		local lang_line lang_key lang_value
+		while IFS= read -r lang_line || [[ -n "$lang_line" ]]; do
+			[[ -z "$lang_line" || "$lang_line" == \#* ]] && continue
+			lang_key="${lang_line%%=*}"
+			lang_value="${lang_line#*=}"
+			[[ "$lang_key" == "LANGUAGE" ]] && LANGUAGE="$lang_value"
+		done <"$lang_file"
+	fi
+	export LAZY_READER_LANG_DIRECTIVE
+	LAZY_READER_LANG_DIRECTIVE="$(language_directive "$LANGUAGE")"
+
 	case "$TTS_PROVIDER" in
 	piper | openrouter)
 		;;
@@ -254,6 +286,17 @@ _speak_openrouter() {
 	local tts_voice="${TTS_VOICE:-alloy}"
 	local response_format
 	response_format="$(resolve_openrouter_response_format "$tts_model")"
+
+	# grok-voice is the only OpenRouter TTS model that pronounces German — but
+	# only if xAI receives a `language` field. OpenRouter's OpenAI-compatible
+	# /audio/speech drops it, so route it through the provider passthrough.
+	# ponytail: xAI-only, the one documented path to German TTS
+	# (docs/tts-providers.md); untested against the live API — verify with a key.
+	local provider_lang=""
+	if [[ -n "${LANGUAGE:-}" && "${LANGUAGE,,}" != "en" && "$tts_model" == x-ai/* ]]; then
+		provider_lang="${LANGUAGE,,}"
+	fi
+
 	local payload
 	payload="$(jq -n \
 		--arg model "$tts_model" \
@@ -261,7 +304,10 @@ _speak_openrouter() {
 		--arg voice "$tts_voice" \
 		--arg response_format "$response_format" \
 		--arg speed "$OPENROUTER_SPEED" \
-		'{model: $model, input: $input, voice: $voice, response_format: $response_format} + if $speed == "" then {} else {speed: ($speed | tonumber)} end')"
+		--arg plang "$provider_lang" \
+		'{model: $model, input: $input, voice: $voice, response_format: $response_format}
+		 + (if $speed == "" then {} else {speed: ($speed | tonumber)} end)
+		 + (if $plang == "" then {} else {provider: {options: {xai: {language: $plang}}}} end)')"
 
 	# Download TTS audio to temp file with timeout + retry.
 	# Temp file avoids error-body-piped-to-player noise and enables HTTP status classification.

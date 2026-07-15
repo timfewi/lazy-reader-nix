@@ -194,9 +194,29 @@ lazy-reader summarize
 lazy-reader solve
 lazy-reader ask
 lazy-reader teach
+lazy-reader switch german    # every mode answers in German + German-capable TTS
+lazy-reader switch english   # back to the English default
 ```
 
 If this works, your script is fine and only keybinding setup remains.
+
+## Language switch
+
+`lazy-reader switch <language>` flips the whole tool between English and German
+without a rebuild. It persists two things under `~/.config/lazy-reader/`:
+
+- `lang.conf` (`LANGUAGE=de`) — appends a "reply in German" directive to every
+  mode's LLM prompt (narrate, explain, summarize, solve, ask, teach, master,
+  vision), so all of them answer in German. English is the default and leaves
+  the prompts byte-for-byte unchanged.
+- `tts.conf` — points TTS at `x-ai/grok-voice-tts-1.0` for German (the only
+  OpenRouter model that can pronounce it) and back to `hexgrad/kokoro-82m` for
+  English.
+
+German pronunciation depends on the xAI `language` passthrough documented in
+`docs/tts-providers.md`; verify it against a live key before relying on it.
+`switch` only rewrites config, so `lazy-reader-set-tts` can still override the
+voice afterwards.
 
 ## Make reading faster
 

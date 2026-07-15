@@ -37,6 +37,9 @@ printf 'Authorization: Bearer %s\n' "$api_key" >"$hdrfile"
 chmod 600 "$hdrfile"
 
 prompt="You are reading a screenshot aloud for someone who cannot see it. First decide what the image mainly is. If it is mostly text, such as an article, documentation, an error message, a chat, or code, then read and transcribe that text cleanly and in full, smoothing only enough to make it listenable, and keep important identifiers, numbers, and exact values intact. If it is mainly a diagram, a user interface, a chart, or a photo, then describe clearly what is shown and what it conveys. If it contains both, read the meaningful text and briefly describe the surrounding visual context. Speak in calm, natural spoken language as if a person is talking. Do not use markdown, bullet points, headings, code formatting, or any symbols like star, dash, hash, slash, backtick, or brace. Do not invent text that is not visible. If the image is unreadable or blank, say so in one sentence."
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+prompt="${prompt}${LAZY_READER_LANG_DIRECTIVE:-}"
 
 jq -n \
 	--arg m "$model" \

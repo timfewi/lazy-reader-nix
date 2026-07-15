@@ -7,6 +7,9 @@ input="$(cat)"
 model="${LAZY_READER_EXPLAIN_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_EXPLAIN_MAX_TOKENS:-12000}"
 temperature="${LAZY_READER_EXPLAIN_TEMPERATURE:-0.1}"
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+lang="${LAZY_READER_LANG_DIRECTIVE:-}"
 
 response=$(curl -sS --max-time 120 --connect-timeout 15 \
 	https://openrouter.ai/api/v1/chat/completions \
@@ -17,6 +20,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
 		--arg m "$model" \
 		--argjson tok "$max_tokens" \
 		--argjson temp "$temperature" \
+		--arg lang "$lang" \
 		'{
       model:$m,
       temperature:$temp,
@@ -24,7 +28,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("Explain this code in short, natural spoken language for listening. Use 4 to 6 simple sentences. No bullet points, no markdown, no code formatting, and no symbols like star dash hash slash backticks or braces. Use plain words as if a person is speaking. If context is missing, make one brief assumption and continue.\n\nCode:\n\n" + $t)
+          content:("Explain this code in short, natural spoken language for listening. Use 4 to 6 simple sentences. No bullet points, no markdown, no code formatting, and no symbols like star dash hash slash backticks or braces. Use plain words as if a person is speaking. If context is missing, make one brief assumption and continue.\n\nCode:\n\n" + $t + $lang)
         }
       ]
     }')") || {

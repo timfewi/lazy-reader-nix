@@ -8,6 +8,9 @@ input="$(cat)"
 model="${LAZY_READER_ASK_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_ASK_MAX_TOKENS:-12000}"
 temperature="${LAZY_READER_ASK_TEMPERATURE:-0.2}"
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+lang="${LAZY_READER_LANG_DIRECTIVE:-}"
 
 response=$(curl -sS --max-time 120 --connect-timeout 15 \
 	https://openrouter.ai/api/v1/chat/completions \
@@ -19,6 +22,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
 		--arg m "$model" \
 		--argjson tok "$max_tokens" \
 		--argjson temp "$temperature" \
+		--arg lang "$lang" \
 		'{
       model:$m,
       temperature:$temp,
@@ -26,7 +30,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("You are a helpful assistant answering a question about a piece of text. Answer in short, natural spoken language suitable for listening aloud. Use plain words and full sentences. Do not use bullet points, markdown, code formatting, or symbols like star, dash, hash, slash, backticks, or braces. Give a concise, direct answer. If context is ambiguous, make one brief assumption and continue.\n\nContext:\n\n" + $ctx + "\n\nQuestion: " + $q)
+          content:("You are a helpful assistant answering a question about a piece of text. Answer in short, natural spoken language suitable for listening aloud. Use plain words and full sentences. Do not use bullet points, markdown, code formatting, or symbols like star, dash, hash, slash, backticks, or braces. Give a concise, direct answer. If context is ambiguous, make one brief assumption and continue.\n\nContext:\n\n" + $ctx + "\n\nQuestion: " + $q + $lang)
         }
       ]
     }')") || {

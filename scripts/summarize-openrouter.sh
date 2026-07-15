@@ -7,6 +7,9 @@ input="$(cat)"
 model="${LAZY_READER_SUMMARIZE_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_SUMMARIZE_MAX_TOKENS:-32000}"
 temperature="${LAZY_READER_SUMMARIZE_TEMPERATURE:-0.12}"
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+lang="${LAZY_READER_LANG_DIRECTIVE:-}"
 
 response=$(curl -sS --max-time 120 --connect-timeout 15 \
 	https://openrouter.ai/api/v1/chat/completions \
@@ -17,6 +20,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
 		--arg m "$model" \
 		--argjson tok "$max_tokens" \
 		--argjson temp "$temperature" \
+		--arg lang "$lang" \
 		'{
       model:$m,
       temperature:$temp,
@@ -24,7 +28,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("Summarize the following passage for listening aloud. Compress it into a clear spoken summary that keeps the main point, the most important supporting details, and any conclusion or next step. Prefer short paragraphs or a smooth spoken flow rather than a list. Do not use markdown, bullet points, headings, or code formatting. Avoid reading symbols aloud unless absolutely necessary. If the passage is technical, translate it into plain language while preserving the key meaning. Keep the summary concise but complete enough that someone could understand the passage without hearing every original detail.\n\nPassage:\n\n" + $t)
+          content:("Summarize the following passage for listening aloud. Compress it into a clear spoken summary that keeps the main point, the most important supporting details, and any conclusion or next step. Prefer short paragraphs or a smooth spoken flow rather than a list. Do not use markdown, bullet points, headings, or code formatting. Avoid reading symbols aloud unless absolutely necessary. If the passage is technical, translate it into plain language while preserving the key meaning. Keep the summary concise but complete enough that someone could understand the passage without hearing every original detail.\n\nPassage:\n\n" + $t + $lang)
         }
       ]
     }')") || {

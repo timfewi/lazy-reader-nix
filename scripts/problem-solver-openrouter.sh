@@ -7,6 +7,9 @@ input="$(cat)"
 model="${LAZY_READER_PROBLEM_SOLVER_MODEL:-openai/gpt-4o-mini}"
 max_tokens="${LAZY_READER_PROBLEM_SOLVER_MAX_TOKENS:-16000}"
 temperature="${LAZY_READER_PROBLEM_SOLVER_TEMPERATURE:-0.12}"
+# Empty unless `lazy-reader switch <language>` set one; appended verbatim so the
+# English prompt is byte-for-byte unchanged by default.
+lang="${LAZY_READER_LANG_DIRECTIVE:-}"
 
 response=$(curl -sS --max-time 120 --connect-timeout 15 \
 	https://openrouter.ai/api/v1/chat/completions \
@@ -17,6 +20,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
 		--arg m "$model" \
 		--argjson tok "$max_tokens" \
 		--argjson temp "$temperature" \
+		--arg lang "$lang" \
 		'{
       model:$m,
       temperature:$temp,
@@ -24,7 +28,7 @@ response=$(curl -sS --max-time 120 --connect-timeout 15 \
       messages:[
         {
           role:"user",
-          content:("You are a senior troubleshooting assistant. The user will provide selected text that may include terminal output, compiler errors, logs, stack traces, or code snippets. Explain the problem in natural spoken language as if helping a teammate. Do not read symbols, punctuation, or code characters out loud unless absolutely necessary. Do not repeat raw error text. Start with the most likely cause in one short sentence. Then describe what to do next using clear spoken transitions like First, Next, Then, and Finally. Give practical, concrete steps, including exact commands or file names only when useful. Keep each step short and easy to follow. If there are multiple possible causes, pick the most likely one and include one quick check to confirm it. End with what success should look like and one fallback action if it still fails. Avoid markdown, bullet lists, headings, and code fences. Keep the response concise, calm, and human.\n\nSelected text:\n\n" + $t)
+          content:("You are a senior troubleshooting assistant. The user will provide selected text that may include terminal output, compiler errors, logs, stack traces, or code snippets. Explain the problem in natural spoken language as if helping a teammate. Do not read symbols, punctuation, or code characters out loud unless absolutely necessary. Do not repeat raw error text. Start with the most likely cause in one short sentence. Then describe what to do next using clear spoken transitions like First, Next, Then, and Finally. Give practical, concrete steps, including exact commands or file names only when useful. Keep each step short and easy to follow. If there are multiple possible causes, pick the most likely one and include one quick check to confirm it. End with what success should look like and one fallback action if it still fails. Avoid markdown, bullet lists, headings, and code fences. Keep the response concise, calm, and human.\n\nSelected text:\n\n" + $t + $lang)
         }
       ]
     }')") || {

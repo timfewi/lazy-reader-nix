@@ -167,6 +167,21 @@ Getting German would mean either that passthrough, or a local Piper `de_DE`
 voice — but `ttsProvider` is global, so that would route English through Piper
 too, at lower quality than Kokoro.
 
+### `lazy-reader switch german`
+
+`lazy-reader switch german` wires up that passthrough end to end: it writes
+`LANGUAGE=de` to `~/.config/lazy-reader/lang.conf` (which appends a German
+directive to every mode's LLM prompt so the eight modes answer in German) and
+points `tts.conf` at `x-ai/grok-voice-tts-1.0`/`eve`. When `LANGUAGE` is a
+non-English code and the TTS model is `x-ai/*`, `_speak_openrouter` adds
+`{"provider":{"options":{"xai":{"language":"de"}}}}` to the speech request — the
+one documented way to hand grok a `language`. `lazy-reader switch english`
+reverts to `LANGUAGE=en` and `hexgrad/kokoro-82m`/`af_heart`.
+
+This passthrough is still **untested against the live endpoint** — if xAI ignores
+the provider option here too, fall back to a local Piper `de_DE` voice. The LLM
+half (German text) works regardless; only the pronunciation depends on grok.
+
 Note that a speech request has a per-model input cap — grok rejects more than
 15000 characters, and Kokoro's context is 4096 tokens. `lazy-reader` splits
 text on sentence boundaries at `generatedSpeechChunkMaxChars` (default 14000)

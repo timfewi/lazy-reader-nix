@@ -36,9 +36,55 @@ source "${_DIR}/lib/vision.sh"
 
 INPUT_SOURCE="selection"
 MODE="toggle"
+SWITCH_LANG=""
 
 usage() {
-	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master|vision]"
+	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master|vision|switch <language>]"
+}
+
+# Persist a language preset so every mode answers in that language and TTS uses
+# a voice that can pronounce it. `switch german` points TTS at the grok voice
+# (the only OpenRouter model that speaks German, via the xAI language
+# passthrough in tts.sh); `switch english` restores the kokoro default. Both
+# write lang.conf + tts.conf, so the choice survives without a NixOS rebuild
+# and is picked up by load_tts_config on the next run.
+switch_language() {
+	local requested="${1:-}"
+	local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/lazy-reader"
+	local lang label provider model voice
+
+	case "${requested,,}" in
+	de | german | deutsch)
+		lang="de"
+		label="German"
+		provider="openrouter"
+		model="x-ai/grok-voice-tts-1.0"
+		voice="eve"
+		;;
+	en | english | englisch)
+		lang="en"
+		label="English"
+		provider="openrouter"
+		model="hexgrad/kokoro-82m"
+		voice="af_heart"
+		;;
+	*)
+		notify "Unknown language '$requested'. Use: lazy-reader switch german|english"
+		printf '%s\n' "error: unknown language '$requested'. Use 'german' or 'english'." >&2
+		return 1
+		;;
+	esac
+
+	mkdir -p "$config_dir"
+	printf 'LANGUAGE=%s\n' "$lang" >"$config_dir/lang.conf"
+	{
+		printf 'TTS_PROVIDER=%s\n' "$provider"
+		printf 'TTS_MODEL=%s\n' "$model"
+		printf 'TTS_VOICE=%s\n' "$voice"
+	} >"$config_dir/tts.conf"
+
+	notify "Lazy Reader switched to $label."
+	printf '%s\n' "Switched to $label: all modes answer in $label, TTS $provider $model ($voice)."
 }
 
 parse_args() {
@@ -65,6 +111,20 @@ parse_args() {
 		--help | -h)
 			usage
 			exit 0
+			;;
+		switch)
+			if ((has_mode)); then
+				printf '%s\n' "error: multiple commands provided" >&2
+				return 1
+			fi
+			if (($# < 2)); then
+				printf '%s\n' "error: switch requires a language (german|english)" >&2
+				return 1
+			fi
+			MODE="switch"
+			SWITCH_LANG="$2"
+			has_mode=1
+			shift
 			;;
 		stop | toggle | start | status | narrate | explain | summarize | solve | ask | teach | master | vision | screenshot)
 			if ((has_mode)); then
@@ -369,6 +429,12 @@ main() {
 			echo "idle"
 		fi
 		exit 0
+		;;
+	switch)
+		if switch_language "$SWITCH_LANG"; then
+			exit 0
+		fi
+		exit 1
 		;;
 	explain | summarize | narrate | solve | ask | teach | master | vision)
 		if is_running; then
