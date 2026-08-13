@@ -39,7 +39,34 @@ MODE="toggle"
 SWITCH_LANG=""
 
 usage() {
-	printf '%s\n' "Usage: lazy-reader [--stdin|--input-source selection|stdin] [toggle|start|stop|status|narrate|explain|summarize|solve|ask|teach|master|vision|switch <language>]"
+	cat <<'EOF'
+Usage: lazy-reader [INPUT] COMMAND
+
+Read input from (choose one; default: selected text, then clipboard):
+  --selection, --primary       selected text (Wayland primary selection)
+  --cb, --clipboard            regular clipboard; copy with Ctrl+C first
+  --stdin                      standard input; pipe text into lazy-reader
+  --input-source SOURCE        selection, clipboard, or stdin
+
+Commands:
+  start, toggle                read the input aloud
+  narrate, explain, summarize  rewrite, explain, or summarize with the model
+  solve, ask, teach            solve, answer a question about, or teach input
+  master                       expert summary of the clipboard (asks first)
+  vision, screenshot           describe a screenshot in the clipboard
+  stop, status                 stop speech or show whether it is running
+  switch german|english        persist the answer language and TTS voice
+  -h, --help                   show this help
+
+Examples:
+  lazy-reader explain          explain selected text
+  lazy-reader --cb explain     explain text copied with Ctrl+C
+  command | lazy-reader --stdin summarize
+  lazy-reader --input-source clipboard narrate
+
+Text is an input stream, not a command argument. Do not paste a long text
+after "lazy-reader explain"; select, copy, pipe, or choose an input source.
+EOF
 }
 
 # Persist a language preset so every mode answers in that language and TTS uses
@@ -97,6 +124,12 @@ parse_args() {
 
 	while (($#)); do
 		case "$1" in
+		--selection | --primary)
+			INPUT_SOURCE="selection"
+			;;
+		--cb | --clipboard)
+			INPUT_SOURCE="clipboard"
+			;;
 		--stdin)
 			INPUT_SOURCE="stdin"
 			;;

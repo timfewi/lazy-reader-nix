@@ -198,6 +198,30 @@ lazy-reader switch german    # every mode answers in German + German-capable TTS
 lazy-reader switch english   # back to the English default
 ```
 
+## Terminal input: select, copy, or pipe
+
+`lazy-reader` never accepts the text itself as a command-line argument. This
+avoids shell quoting problems with Markdown, backticks, pipes, and multi-line
+text. Pick one input source, then the mode:
+
+```bash
+# Highlight text with the mouse, then:
+lazy-reader explain
+
+# Copy text with Ctrl+C, then:
+lazy-reader --cb explain
+
+# Give command output to a mode:
+journalctl -b | lazy-reader --stdin summarize
+lazy-reader --input-source clipboard narrate
+```
+
+The input flags work before or after the mode. `--selection` / `--primary`
+selects the Wayland primary selection (the default, falling back to the normal
+clipboard); `--cb` / `--clipboard` uses only the normal clipboard; and
+`--stdin` reads a pipe. Run `lazy-reader --help` for the complete command list
+and examples.
+
 If this works, your script is fine and only keybinding setup remains.
 
 ## Language switch

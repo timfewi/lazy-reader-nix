@@ -378,6 +378,56 @@ run_lr() {
   [ "$output" = "Explained: stdin snippet" ]
 }
 
+@test "explain: --cb reads the regular clipboard" {
+  local speech_log="${TEST_TMPDIR}/explain-clipboard.log"
+
+  make_stub "wl-paste" '
+    if [[ "$1" == "--no-newline" && "$2" != "--primary" ]]; then
+      printf "clipboard snippet"
+    fi
+  '
+  make_stub "piper" '
+    output=""
+    while (($#)); do
+      if [[ "$1" == "-f" ]]; then
+        output="$2"
+        shift 2
+        continue
+      fi
+      shift
+    done
+    input="$(cat)"
+    printf "%s" "$input" > "$LAZY_READER_TEST_SPEECH_LOG"
+    if [[ "$output" == "-" ]]; then
+      printf "wave-data"
+    else
+      printf "wave-data" > "$output"
+    fi
+  '
+  make_stub "mpv" 'cat >/dev/null'
+
+  run env \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}" \
+    "LAZY_READER_MODEL=${MODEL_FILE}" \
+    "LAZY_READER_EXPLAIN_CMD=input=\"\$(cat)\"; printf \"Explained: %s\" \"\$input\"" \
+    "LAZY_READER_TEST_SPEECH_LOG=${speech_log}" \
+    "PATH=${PATH}" \
+    bash "${SCRIPTS_DIR}/lazy-reader.sh" --cb explain
+
+  [ "$status" -eq 0 ]
+  run cat "${speech_log}"
+  [ "$status" -eq 0 ]
+  [ "$output" = "Explained: clipboard snippet" ]
+}
+
+@test "help: documents clipboard and stdin input" {
+  run_lr --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--cb, --clipboard"* ]]
+  [[ "$output" == *"--stdin"* ]]
+  [[ "$output" == *"not a command argument"* ]]
+}
+
 # ---------------------------------------------------------------------------
 # summarize / solve / ask — already running
 # ---------------------------------------------------------------------------
