@@ -119,9 +119,29 @@ scripts/update-openrouter-tts-providers.sh
 <!-- BEGIN OPENROUTER_TTS_MODELS -->
 ### Generated OpenRouter TTS catalogue
 
-Run `scripts/update-openrouter-tts-providers.sh` to populate or refresh this
-catalogue. Use `scripts/update-openrouter-tts-providers.sh --check` in a
-manual review to detect a stale catalogue without modifying the file.
+Generated from OpenRouter's public Models API. Refresh it manually with `scripts/update-openrouter-tts-providers.sh`; `--check` verifies that this section is current without changing files.
+
+| Model | Name | Voices published by API |
+| --- | --- | --- |
+| `canopylabs/orpheus-3b-0.1-ft` | Canopy Labs: Orpheus 3B  | Not published by the API |
+| `deepgram/aura-2` | Deepgram: Aura-2  | Not published by the API |
+| `deepgram/flux-tts:free` | Deepgram: Flux TTS (free)  | Not published by the API |
+| `fish-audio/s1` | Fish Audio: S1  | Not published by the API |
+| `fish-audio/s2-pro` | Fish Audio: S2 Pro  | Not published by the API |
+| `fish-audio/s2.1-pro` | Fish Audio: S2.1 Pro  | Not published by the API |
+| `fish-audio/s2.1-pro-free:free` | Fish Audio: S2.1 Pro Free (free)  | Not published by the API |
+| `google/gemini-3.1-flash-tts-preview` | Google: Gemini 3.1 Flash TTS Preview  | Not published by the API |
+| `hexgrad/kokoro-82m` | hexgrad: Kokoro 82M  | Not published by the API |
+| `microsoft/mai-voice-2` | Microsoft: MAI-Voice-2  | Not published by the API |
+| `microsoft/mai-voice-2-flash` | Microsoft: MAI-Voice-2-Flash  | Not published by the API |
+| `minimax/speech-2.8-hd` | MiniMax: Speech 2.8 HD  | Not published by the API |
+| `minimax/speech-2.8-turbo` | MiniMax: Speech 2.8 Turbo  | Not published by the API |
+| `mistralai/voxtral-mini-tts-2603` | Mistral: Voxtral Mini TTS  | Not published by the API |
+| `qwen/qwen-audio-3.0-tts-flash` | Qwen: Qwen-Audio-3.0-TTS Flash  | Not published by the API |
+| `qwen/qwen-audio-3.0-tts-plus` | Qwen: Qwen-Audio-3.0-TTS Plus  | Not published by the API |
+| `sesame/csm-1b` | Sesame: CSM 1B  | Not published by the API |
+| `x-ai/grok-voice-tts-1.0` | SpaceXAI: Grok Voice TTS 1.0  | Not published by the API |
+
 <!-- END OPENROUTER_TTS_MODELS -->
 
 ## Languages
