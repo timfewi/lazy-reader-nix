@@ -13,5 +13,5 @@ echo "==> Bats unit tests"
 if command -v bats >/dev/null 2>&1; then
   exec bats --recursive "${REPO_ROOT}/tests/bats"
 else
-  exec nix-shell -p bats --run "bats --recursive '${REPO_ROOT}/tests/bats'"
+  exec nix-shell -p bats curl jq --run "bats --recursive '${REPO_ROOT}/tests/bats'"
 fi

@@ -108,39 +108,41 @@ format: 24 kHz, signed 16-bit little-endian, mono.
 
 ### OpenRouter model and voice presets
 
-These presets came from the OpenRouter model API pages'
-`supported_tts_voices` fields. Treat those pages as the source of truth because
-voice IDs can change independently of Lazy Reader.
-
-Recommended quick switches:
+Voice IDs are model-specific and can change independently of Lazy Reader. The
+generated catalogue is maintained from OpenRouter's public API; refresh it
+before relying on it for a new configuration:
 
 ```bash
-lazy-reader-set-tts openrouter x-ai/grok-voice-tts-1.0 rex
-lazy-reader-set-tts openrouter google/gemini-3.1-flash-tts-preview Zephyr
-lazy-reader-set-tts openrouter zyphra/zonos-v0.1-transformer american_female
-lazy-reader-set-tts openrouter zyphra/zonos-v0.1-hybrid american_female
-lazy-reader-set-tts openrouter sesame/csm-1b conversational_a
-lazy-reader-set-tts openrouter canopylabs/orpheus-3b-0.1-ft tara
-lazy-reader-set-tts openrouter hexgrad/kokoro-82m af_heart
-lazy-reader-set-tts openrouter mistralai/voxtral-mini-tts-2603 en_paul_neutral
-lazy-reader-set-tts openrouter openai/gpt-4o-mini-tts-2025-12-15 alloy
+scripts/update-openrouter-tts-providers.sh
 ```
 
-| Model                                 | Good default       | Exact current voice IDs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x-ai/grok-voice-tts-1.0`             | `eve`              | `eve`, `ara`, `rex`, `sal`, `leo`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `google/gemini-3.1-flash-tts-preview` | `Zephyr`           | `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`, `Orus`, `Aoede`, `Callirrhoe`, `Autonoe`, `Enceladus`, `Iapetus`, `Umbriel`, `Algieba`, `Despina`, `Erinome`, `Algenib`, `Rasalgethi`, `Laomedeia`, `Achernar`, `Alnilam`, `Schedar`, `Gacrux`, `Pulcherrima`, `Achird`, `Zubenelgenubi`, `Vindemiatrix`, `Sadachbia`, `Sadaltager`, `Sulafat`                                                                                                                                                                                                                                                                                                                               |
-| `zyphra/zonos-v0.1-transformer`       | `american_female`  | `american_female`, `american_male`, `british_female`, `british_male`, `random`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `zyphra/zonos-v0.1-hybrid`            | `american_female`  | `american_female`, `american_male`, `british_female`, `british_male`, `random`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `sesame/csm-1b`                       | `conversational_a` | `conversational_a`, `conversational_b`, `read_speech_a`, `read_speech_b`, `read_speech_c`, `read_speech_d`, `none`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `canopylabs/orpheus-3b-0.1-ft`        | `tara`             | `tara`, `leah`, `jess`, `leo`, `dan`, `mia`, `zac`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `hexgrad/kokoro-82m`                  | `af_heart`         | `af_alloy`, `af_aoede`, `af_bella`, `af_heart`, `af_jessica`, `af_kore`, `af_nicole`, `af_nova`, `af_river`, `af_sarah`, `af_sky`, `am_adam`, `am_echo`, `am_eric`, `am_fenrir`, `am_liam`, `am_michael`, `am_onyx`, `am_puck`, `am_santa`, `bf_alice`, `bf_emma`, `bf_isabella`, `bf_lily`, `bm_daniel`, `bm_fable`, `bm_george`, `bm_lewis`, `ef_dora`, `em_alex`, `em_santa`, `ff_siwis`, `hf_alpha`, `hf_beta`, `hm_omega`, `hm_psi`, `if_sara`, `im_nicola`, `jf_alpha`, `jf_gongitsune`, `jf_nezumi`, `jf_tebukuro`, `jm_kumo`, `pf_dora`, `pm_alex`, `pm_santa`, `zf_xiaobei`, `zf_xiaoni`, `zf_xiaoxiao`, `zf_xiaoyi`, `zm_yunjian`, `zm_yunxi`, `zm_yunxia`, `zm_yunyang` |
-| `mistralai/voxtral-mini-tts-2603`     | `en_paul_neutral`  | `en_paul_sad`, `en_paul_neutral`, `en_paul_happy`, `en_paul_frustrated`, `en_paul_excited`, `en_paul_confident`, `en_paul_cheerful`, `en_paul_angry`, `gb_oliver_neutral`, `gb_oliver_sad`, `gb_oliver_excited`, `gb_oliver_curious`, `gb_oliver_confident`, `gb_oliver_cheerful`, `gb_oliver_angry`, `gb_jane_sarcasm`, `gb_jane_confused`, `gb_jane_shameful`, `gb_jane_sad`, `gb_jane_neutral`, `gb_jane_jealousy`, `gb_jane_frustrated`, `gb_jane_curious`, `gb_jane_confident`, `fr_marie_sad`, `fr_marie_neutral`, `fr_marie_happy`, `fr_marie_excited`, `fr_marie_curious`, `fr_marie_angry`                                                                                |
-| `openai/gpt-4o-mini-tts-2025-12-15`   | `alloy`            | `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `onyx`, `nova`, `sage`, `shimmer`, `verse`, `marin`, `cedar`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+<!-- BEGIN OPENROUTER_TTS_MODELS -->
+### Generated OpenRouter TTS catalogue
 
-Kokoro uses prefixed voice IDs. Use `af_alloy` for Alloy, not `alloy`.
-The full upstream Kokoro voice table is also available in
-`https://huggingface.co/hexgrad/Kokoro-82M/raw/main/VOICES.md`.
+Generated from OpenRouter's public Models API. Refresh it manually with `scripts/update-openrouter-tts-providers.sh`; `--check` verifies that this section is current without changing files.
+
+| Model | Name | Voices published by API |
+| --- | --- | --- |
+| `canopylabs/orpheus-3b-0.1-ft` | Canopy Labs: Orpheus 3B  | Not published by the API |
+| `deepgram/aura-2` | Deepgram: Aura-2  | Not published by the API |
+| `deepgram/flux-tts:free` | Deepgram: Flux TTS (free)  | Not published by the API |
+| `fish-audio/s1` | Fish Audio: S1  | Not published by the API |
+| `fish-audio/s2-pro` | Fish Audio: S2 Pro  | Not published by the API |
+| `fish-audio/s2.1-pro` | Fish Audio: S2.1 Pro  | Not published by the API |
+| `fish-audio/s2.1-pro-free:free` | Fish Audio: S2.1 Pro Free (free)  | Not published by the API |
+| `google/gemini-3.1-flash-tts-preview` | Google: Gemini 3.1 Flash TTS Preview  | Not published by the API |
+| `hexgrad/kokoro-82m` | hexgrad: Kokoro 82M  | Not published by the API |
+| `microsoft/mai-voice-2` | Microsoft: MAI-Voice-2  | Not published by the API |
+| `microsoft/mai-voice-2-flash` | Microsoft: MAI-Voice-2-Flash  | Not published by the API |
+| `minimax/speech-2.8-hd` | MiniMax: Speech 2.8 HD  | Not published by the API |
+| `minimax/speech-2.8-turbo` | MiniMax: Speech 2.8 Turbo  | Not published by the API |
+| `mistralai/voxtral-mini-tts-2603` | Mistral: Voxtral Mini TTS  | Not published by the API |
+| `qwen/qwen-audio-3.0-tts-flash` | Qwen: Qwen-Audio-3.0-TTS Flash  | Not published by the API |
+| `qwen/qwen-audio-3.0-tts-plus` | Qwen: Qwen-Audio-3.0-TTS Plus  | Not published by the API |
+| `sesame/csm-1b` | Sesame: CSM 1B  | Not published by the API |
+| `x-ai/grok-voice-tts-1.0` | SpaceXAI: Grok Voice TTS 1.0  | Not published by the API |
+
+<!-- END OPENROUTER_TTS_MODELS -->
 
 ## Languages
 
@@ -198,16 +200,8 @@ services.lazy-reader = {
 };
 ```
 
-Current xAI Grok Voice TTS voices listed by OpenRouter:
-
-- `eve`
-- `ara`
-- `rex`
-- `sal`
-- `leo`
-
-Use one of those values with `x-ai/grok-voice-tts-1.0`. Do not use OpenAI-style
-voices like `alloy` with this model.
+Use a voice listed for `x-ai/grok-voice-tts-1.0` in the generated catalogue.
+Do not use OpenAI-style voices such as `alloy` with this model.
 
 ## Discover models and voices
 

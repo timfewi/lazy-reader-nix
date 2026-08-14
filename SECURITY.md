@@ -4,11 +4,19 @@
 
 This repository contains a local NixOS module and shell script for user-triggered text-to-speech.
 
+Security fixes are made against the current default branch. Older revisions may
+not receive fixes.
+
 ## Reporting a vulnerability
 
 Please do not open a public issue for sensitive vulnerabilities.
 
-Instead, report privately with:
+Instead, use GitHub's private vulnerability reporting form from this
+repository's Security tab. If private reporting is not enabled, contact the
+repository owner through their GitHub profile and do not include exploit
+details in a public issue.
+
+Include:
 
 - A clear description of the issue
 - Reproduction steps

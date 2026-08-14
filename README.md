@@ -705,6 +705,20 @@ This is the primary repository validation command. It runs two suites:
 
 `bats` is pulled in automatically via `nix-shell -p bats` if not already on `PATH`.
 
+## Maintainer documentation refresh
+
+OpenRouter's available TTS models and voices change independently of this
+module. Maintainers can refresh the generated catalogue in
+`docs/tts-providers.md` without an API key:
+
+```bash
+scripts/update-openrouter-tts-providers.sh
+scripts/update-openrouter-tts-providers.sh --check
+```
+
+The refresh is deliberately manual and is not part of CI: it reads a live
+third-party API and only updates documentation.
+
 Focused syntax-only checks are also available:
 
 ```bash

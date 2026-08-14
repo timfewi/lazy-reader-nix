@@ -19,17 +19,15 @@ Thanks for helping improve lazy-reader-nix.
    for f in lazy-reader.nix default.nix nix/*.nix; do nix-instantiate --parse "$f"; done
    ```
 
-4. Rebuild and test on NixOS:
-
-   ```bash
-   sudo nixos-rebuild switch
-   lazy-reader status
-   ```
+4. Test a NixOS integration manually only when you explicitly intend to
+   activate your own configuration. This repository's automated checks do not
+   rebuild or switch a system.
 
 ## Pull requests
 
 - Keep changes focused and minimal.
-- Update `README.md` and any relevant `.github/` instructions when behavior, options, or contributor workflow changes.
+- Update `README.md` and relevant documentation when behavior, options, or
+  contributor workflow changes.
 - Do not commit secrets or machine-specific paths.
 
 ## Reporting issues
@@ -40,3 +38,6 @@ Please include:
 - Desktop session (GNOME/Wayland expected)
 - Relevant logs (`systemctl --user status lazy-reader-bind-gnome.service`)
 - Exact repro steps
+
+For security-sensitive reports, follow `SECURITY.md` instead of opening an
+issue.
