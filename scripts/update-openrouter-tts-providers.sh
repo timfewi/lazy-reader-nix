@@ -9,7 +9,10 @@ readonly END_MARKER="<!-- END OPENROUTER_TTS_MODELS -->"
 
 check_only=0
 models_url="${OPENROUTER_MODELS_URL:-https://openrouter.ai/api/v1/models?output_modalities=speech}"
-model_url_template="${OPENROUTER_MODEL_URL_TEMPLATE:-https://openrouter.ai/api/v1/model/{model}}"
+model_url_template="${OPENROUTER_MODEL_URL_TEMPLATE:-}"
+if [[ -z "$model_url_template" ]]; then
+	model_url_template='https://openrouter.ai/api/v1/model/{model}'
+fi
 
 usage() {
 	cat <<'EOF'
